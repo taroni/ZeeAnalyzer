@@ -11,7 +11,7 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 process.GlobalTag = GlobalTag(process.GlobalTag, '92X_upgrade2017_realistic_Candidate_forECALStudies', '')
 
 # input
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 inputFilesData = cms.untracked.vstring(
 '/store/data/Run2017D/DoubleEG/MINIAOD/PromptReco-v1/000/302/030/00000/E69F63AA-EE8E-E711-8121-02163E019BAF.root',
 '/store/data/Run2017D/DoubleEG/MINIAOD/PromptReco-v1/000/302/031/00000/008329E5-368F-E711-A1CD-02163E01A21D.root',
@@ -43,7 +43,6 @@ process.ntupler = cms.EDAnalyzer(
     genParticles = cms.InputTag("genParticles"),
     vertices     = cms.InputTag("offlinePrimaryVertices"),
     conversions  = cms.InputTag('allConversions'),
-    massRange    = cms.vint32(70, 110),
     isMC         = cms.bool(True)
     )
 
@@ -52,6 +51,4 @@ process.TFileService = cms.Service("TFileService",
                                    )
 
 process.load("DPGAnalysis/Skims/ZElectronSkim_cff") 
-
-
 process.p = cms.Path(process.zdiElectronSequence*process.ntupler)

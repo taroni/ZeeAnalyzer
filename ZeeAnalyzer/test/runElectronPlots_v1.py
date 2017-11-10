@@ -11,7 +11,7 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 process.GlobalTag = GlobalTag(process.GlobalTag, '92X_upgrade2017_realistic_Candidate_forECALStudies', '')
 
 # input
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 
 inputFilesMC = cms.untracked.vstring(
 '/store/mc/RunIISummer17DRPremix/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/AODSIM/92X_upgrade2017_realistic_v10_ext1-v2/10000/00CDB4C7-5C93-E711-AF33-02163E0142CA.root',
@@ -35,7 +35,6 @@ process.ntupler = cms.EDAnalyzer(
     genParticles = cms.InputTag("genParticles"),
     vertices     = cms.InputTag("offlinePrimaryVertices"),
     conversions  = cms.InputTag('allConversions'),
-    massRange    = cms.vint32(70, 110),
     isMC         = cms.bool(True)
     )
 
@@ -43,4 +42,6 @@ process.TFileService = cms.Service("TFileService",
                                    fileName = cms.string( outputFile )
                                    )
 
-process.p = cms.Path(process.ntupler)
+process.load("SimpleAnalyzer/ZeeAnalyzer/ZMassSkim_cff") 
+process.p = cms.Path(process.zdiElectronSequence*process.ntupler)
+

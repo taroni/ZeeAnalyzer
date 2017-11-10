@@ -56,8 +56,6 @@ private:
   // ----------member data ---------------------------
   
   bool isMC=false; 
-  std::vector<int> massRange;
-
   // Data members
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   edm::EDGetTokenT<GenEventInfoProduct> genEventInfoProduct_;
@@ -107,7 +105,6 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
     (iConfig.getParameter<edm::InputTag>
      ("conversions"));
 
-  massRange = iConfig.getParameter<std::vector<int>>("massRange");
 
   edm::Service<TFileService> fs;
   h_eta = fs->make<TH1F>("eta", "eta", 50,-2.5,2.5);
