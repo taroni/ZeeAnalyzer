@@ -11,6 +11,7 @@
 <use name="CommonTools/Utils"/>
 <use name="CommonTools/UtilAlgos"/>
 <use name="DataFormats/FWLite"/>
+<use name="DataFormats/PatCandidates"/>
 <use name="clhep"/>
 <use name="root"/>
 <use name="rootcore"/>

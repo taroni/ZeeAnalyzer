@@ -13,11 +13,13 @@
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-
+#include "DataFormats/PatCandidates/interface/UserData.h"
+#include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/PatCandidates/interface/VIDCutFlowResult.h"
+
 
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -31,6 +33,7 @@
 
 #include "TTree.h"
 #include "Math/VectorUtil.h"
+#include "TVector3.h"
 
 class ElectronPlots : public edm::EDAnalyzer {
 public:
@@ -60,13 +63,14 @@ private:
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   edm::EDGetTokenT<GenEventInfoProduct> genEventInfoProduct_;
   edm::EDGetToken electronsToken_;
+  edm::EDGetToken patElectronsToken_;
   edm::EDGetTokenT<edm::View<reco::GenParticle> > genParticlesToken_;
   edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
   edm::EDGetTokenT<reco::ConversionCollection> conversionsToken_;
 
 
   // Histos
-  TH1F *h_eta, *h_phi, *h_isTrue;
+  TH1F *h_eta, *h_phi, *h_isTrue, *h_eID;
   TH1F *h_EB_pt, *h_EE_pt;
   TH1F *h_EB_rawEne, *h_EE_rawEne;
   TH1F *h_EB_sigmaIeIe, *h_EE_sigmaIeIe;
@@ -92,6 +96,9 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
   electronsToken_    = mayConsume<edm::View<reco::GsfElectron> >
     (iConfig.getParameter<edm::InputTag>
      ("electrons"));
+  patElectronsToken_    = mayConsume<pat::ElectronCollection >
+    (iConfig.getParameter<edm::InputTag>
+     ("patelectrons"));
 
   genParticlesToken_ = mayConsume<edm::View<reco::GenParticle> >
     (iConfig.getParameter<edm::InputTag>
@@ -110,6 +117,7 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
   h_eta = fs->make<TH1F>("eta", "eta", 50,-2.5,2.5);
   h_phi = fs->make<TH1F>("phi", "phi", 50,-2.5,2.5);
   h_isTrue = fs->make<TH1F>("isTrue", "isTrue", 2,-0.5,1.5);
+  h_eID = fs->make<TH1F>("eIDSummer16VetoWP", "eIDSummer16VetoWP", 2, -0.5, 1.5);
   h_EB_pt = fs->make<TH1F>("EB_pt", "EB_pt", 50,0.,200.);
   h_EE_pt = fs->make<TH1F>("EE_pt", "EE_pt", 50,0.,200.);
   h_EB_rawEne = fs->make<TH1F>("EB_rawEne", "EB_rawEne", 50,0.,200.);
@@ -125,7 +133,9 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
   h_EB_dz = fs->make<TH1F>("EB_dz", "EB_dz", 50,0.,0.1);
   h_EE_dz = fs->make<TH1F>("EE_dz", "EE_dz", 50,0.,0.1);
   h_EB_conv = fs->make<TH1F>("EB_conv", "EB_conv", 2,-0.5,1.5);
-  h_EE_conv = fs->make<TH1F>("EE_conv", "EE_conv", 2,-0.5,1.5);  
+  h_EE_conv = fs->make<TH1F>("EE_conv", "EE_conv", 2,-0.5,1.5); 
+
+  typedef reco::Candidate::LorentzVector LorentzVector;
 }
 
 
@@ -142,8 +152,11 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   iEvent.getByToken(beamSpotToken_,theBeamSpot);  
   
   // Get electrons
-   edm::Handle<edm::View<reco::GsfElectron> > electrons;
-   iEvent.getByToken(electronsToken_, electrons);
+  //   edm::Handle<edm::View<reco::GsfElectron> > electrons;
+  //   iEvent.getByToken(electronsToken_, electrons);
+  // Get electrons
+   edm::Handle<pat::ElectronCollection > patelectrons;
+   iEvent.getByToken(patElectronsToken_, patelectrons);
    
   // Get MC collection
   Handle<edm::View<reco::GenParticle> > genParticles;
@@ -171,22 +184,39 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   }
   if ( firstGoodVertex==vertices->end() ) return; // skip event if there are no good PVs
 
-  // Get the conversions collection
-  edm::Handle<reco::ConversionCollection> conversions;
-  iEvent.getByToken(conversionsToken_, conversions);
+  // // Get the conversions collection
+  // edm::Handle<reco::ConversionCollection> conversions;
+  // iEvent.getByToken(conversionsToken_, conversions);
 
+  int i=0; 
+  for (pat::ElectronCollection::const_iterator it = patelectrons->begin(); it != patelectrons->end(); it++){
+    //std::cout << "cut based id " << it->userInt("cutbasedID_veto")<< std::endl;
 
-  // Loop over electrons
-  for (size_t i = 0; i < electrons->size(); ++i){
-    const auto el = electrons->ptrAt(i);
+    for (pat::ElectronCollection::const_iterator jt = it+1; jt != patelectrons->end(); jt++){
+      pat::CompositeCandidate diele;
+      diele.addDaughter(*it);
+      diele.addDaughter(*jt);
+      reco::Candidate::LorentzVector zp4 = it->p4() + jt->p4();
+      diele.setP4(zp4);
+      if (abs( diele.p4().M() - 91)<20) std::cout << iEvent.id().event() << " electronsize "<< patelectrons->size()<<  ", mass  " << diele.p4().M() << ", electron "<< i<< ", pt "<< it->pt() << " ID Veto " <<it->userInt("cutbasedID_veto") << ", electron "<< i+1 << jt->pt() << " ID Veto " <<jt->userInt("cutbasedID_veto") << std::endl;   
+
+    }
+
+    h_eID ->Fill (it->userInt("cutbasedID_veto")); 
+    
+    //  }
+
+    //  // Loop over electrons
+    //  for (size_t i = 0; i < electrons->size(); ++i){
+    //    const auto el = electrons->ptrAt(i);
+    const auto el=it; 
     // acceptance
     if( el->pt() < 5 ) continue;
     if( fabs(el->eta()) > 2.5 ) continue;
 
-    if (i< 10) std::cout << iEvent.id().event() <<  ", electron "<< i<< ", pt "<< el->pt() << std::endl;   
 
     // MC truth match
-    if (isMC==true) h_isTrue -> Fill(matchToTruth( el, genParticles));
+    //    if (isMC==true) h_isTrue -> Fill(matchToTruth( el, genParticles));
 
     // Kinematics and shower shapes
     float scEta = el->superCluster()->eta();
@@ -216,13 +246,13 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     else
       h_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
     
-    // Conversion rejection
-    bool passConvVeto = !ConversionTools::hasMatchedConversion(*el, conversions, theBeamSpot->position());
-    if (fabs(scEta)<1.5)   
-      h_EB_conv -> Fill( (int) passConvVeto ); 
-    else
-      h_EE_conv -> Fill( (int) passConvVeto ); 
-
+    // // Conversion rejection
+    // bool passConvVeto = !ConversionTools::hasMatchedConversion(*el, conversions, theBeamSpot->position());
+    // if (fabs(scEta)<1.5)   
+    //   h_EB_conv -> Fill( (int) passConvVeto ); 
+    // else
+    //   h_EE_conv -> Fill( (int) passConvVeto ); 
+    i++;
   } // Loop over electrons
    
 

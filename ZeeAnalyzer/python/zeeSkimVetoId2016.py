@@ -23,7 +23,7 @@ else:
 
 
 # electron ID (sync with the AlCaReco: https://raw.githubusercontent.com/cms-sw/cmssw/CMSSW_7_5_X/Calibration/EcalAlCaRecoProducers/python/WZElectronSkims_cff.py)
-###RHO is wrong, I should use the effective area correction for the PU https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPFBasedIsolationRun2#Rho_effective_area_corrections, not the SC rho
+###RHO is wrong, I should use the effective area correction for the PU https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPFBasedIsolationRun2#Rho_effective_area_corrections, not the SC rh. Rho to use fixedGridRhoFastjetAll
 identifiedElectrons = goodZeeElectrons.clone(cut = cms.string(goodZeeElectrons.cut.value() +
                                                               " \
 && ( (isEB && (gsfTrack.hitPattern().numberOfLostHits(\'MISSING_INNER_HITS\')<=2) \
