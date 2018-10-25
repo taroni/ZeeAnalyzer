@@ -31,6 +31,8 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
+#include "DataFormats/EcalDetId/interface/EBDetId.h"
+
 #include "TTree.h"
 #include "Math/VectorUtil.h"
 #include "TVector3.h"
@@ -67,7 +69,7 @@ private:
   edm::EDGetTokenT<edm::View<reco::GenParticle> > genParticlesToken_;
   edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
   edm::EDGetTokenT<reco::ConversionCollection> conversionsToken_;
-
+  edm::EDGetTokenT<EcalRecHitCollection> rechits_EB_;
 
   // Histos
   TH1F *h_eta, *h_phi, *h_isTrue, *h_eID;
@@ -79,6 +81,16 @@ private:
   TH1F *h_EB_hoe, *h_EE_hoe;
   TH1F *h_EB_dz, *h_EE_dz;
   TH1F *h_EB_conv, *h_EE_conv;
+  TH1F *hRecovered_eta, *hRecovered_phi, *hRecovered_isTrue, *hRecovered_eID;
+  TH1F *hRecovered_EB_pt, *hRecovered_EE_pt;
+  TH1F *hRecovered_EB_rawEne, *hRecovered_EE_rawEne;
+  TH1F *hRecovered_EB_sigmaIeIe, *hRecovered_EE_sigmaIeIe;
+  TH1F *hRecovered_EB_r9, *hRecovered_EE_r9;
+  TH1F *hRecovered_EB_r9uz, *hRecovered_EE_r9uz;
+  TH1F *hRecovered_EB_hoe, *hRecovered_EE_hoe;
+  TH1F *hRecovered_EB_dz, *hRecovered_EE_dz;
+  TH1F *hRecovered_EB_conv, *hRecovered_EE_conv;
+  TH1F *hZeeMass, *hRecovered_ZeeMass,*hEventCount; 
 };
 
 ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
@@ -93,12 +105,12 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
     (iConfig.getParameter <edm::InputTag>
      ("genEventInfoProduct"));
 
-  electronsToken_    = mayConsume<edm::View<reco::GsfElectron> >
+  electronsToken_    = mayConsume<reco::GsfElectronCollection> 
     (iConfig.getParameter<edm::InputTag>
      ("electrons"));
-  patElectronsToken_    = mayConsume<pat::ElectronCollection >
-    (iConfig.getParameter<edm::InputTag>
-     ("patelectrons"));
+  // patElectronsToken_    = mayConsume<pat::ElectronCollection >
+  //   (iConfig.getParameter<edm::InputTag>
+  //    ("patelectrons"));
 
   genParticlesToken_ = mayConsume<edm::View<reco::GenParticle> >
     (iConfig.getParameter<edm::InputTag>
@@ -112,15 +124,17 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
     (iConfig.getParameter<edm::InputTag>
      ("conversions"));
 
+  rechits_EB_=consumes<EcalRecHitCollection>(iConfig.getParameter<edm::InputTag>("inputRecHitsEB"));
 
   edm::Service<TFileService> fs;
+  hEventCount = fs->make<TH1F>("hEventCount", "hEventCount", 3, -0.5, 2.5);
   h_eta = fs->make<TH1F>("eta", "eta", 50,-2.5,2.5);
   h_phi = fs->make<TH1F>("phi", "phi", 50,-2.5,2.5);
   h_isTrue = fs->make<TH1F>("isTrue", "isTrue", 2,-0.5,1.5);
   h_eID = fs->make<TH1F>("eIDSummer16VetoWP", "eIDSummer16VetoWP", 2, -0.5, 1.5);
   h_EB_pt = fs->make<TH1F>("EB_pt", "EB_pt", 50,0.,200.);
   h_EE_pt = fs->make<TH1F>("EE_pt", "EE_pt", 50,0.,200.);
-  h_EB_rawEne = fs->make<TH1F>("EB_rawEne", "EB_rawEne", 50,0.,200.);
+  h_EB_rawEne = fs->make<TH1F>("EB_rawEne", "EB_rawEne", 500,0.,500.);
   h_EE_rawEne = fs->make<TH1F>("EE_rawEne", "EE_rawEne", 100,0.,400.);
   h_EB_sigmaIeIe = fs->make<TH1F>("EB_sigmaIeIe", "EB_sigmaIeIe", 50,0.,0.05);
   h_EE_sigmaIeIe = fs->make<TH1F>("EE_sigmaIeIe", "EE_sigmaIeIe", 50,0.,0.1);
@@ -134,6 +148,30 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
   h_EE_dz = fs->make<TH1F>("EE_dz", "EE_dz", 50,0.,0.1);
   h_EB_conv = fs->make<TH1F>("EB_conv", "EB_conv", 2,-0.5,1.5);
   h_EE_conv = fs->make<TH1F>("EE_conv", "EE_conv", 2,-0.5,1.5); 
+
+  hRecovered_eta = fs->make<TH1F>("recovered_eta", "eta", 50,-2.5,2.5);
+  hRecovered_phi = fs->make<TH1F>("recovered_phi", "phi", 50,-2.5,2.5);
+  hRecovered_isTrue = fs->make<TH1F>("recovered_isTrue", "isTrue", 2,-0.5,1.5);
+  hRecovered_eID = fs->make<TH1F>("recovered_eIDSummer16VetoWP", "eIDSummer16VetoWP", 2, -0.5, 1.5);
+  hRecovered_EB_pt = fs->make<TH1F>("recovered_EB_pt", "EB_pt", 50,0.,200.);
+  hRecovered_EE_pt = fs->make<TH1F>("recovered_EE_pt", "EE_pt", 50,0.,200.);
+  hRecovered_EB_rawEne = fs->make<TH1F>("recovered_EB_rawEne", "EB_rawEne", 500,0.,500.);
+  hRecovered_EE_rawEne = fs->make<TH1F>("recovered_EE_rawEne", "EE_rawEne", 100,0.,400.);
+  hRecovered_EB_sigmaIeIe = fs->make<TH1F>("recovered_EB_sigmaIeIe", "EB_sigmaIeIe", 50,0.,0.05);
+  hRecovered_EE_sigmaIeIe = fs->make<TH1F>("recovered_EE_sigmaIeIe", "EE_sigmaIeIe", 50,0.,0.1);
+  hRecovered_EB_r9 = fs->make<TH1F>("recovered_EB_r9", "EB_r9", 50,0.5,1.);
+  hRecovered_EE_r9 = fs->make<TH1F>("recovered_EE_r9", "EE_r9", 50,0.5,1.);
+  hRecovered_EB_r9uz = fs->make<TH1F>("recovered_EB_r9uz", "EB_r9uz", 100,0.,1.);
+  hRecovered_EE_r9uz = fs->make<TH1F>("recovered_EE_r9uz", "EE_r9uz", 100,0.,1.);
+  hRecovered_EB_hoe = fs->make<TH1F>("recovered_EB_hoe", "EB_hoe", 50,0.,0.1);
+  hRecovered_EE_hoe = fs->make<TH1F>("recovered_EE_hoe", "EE_hoe", 50,0.,0.1);
+  hRecovered_EB_dz = fs->make<TH1F>("recovered_EB_dz", "EB_dz", 50,0.,0.1);
+  hRecovered_EE_dz = fs->make<TH1F>("recovered_EE_dz", "EE_dz", 50,0.,0.1);
+  hRecovered_EB_conv = fs->make<TH1F>("recovered_EB_conv", "EB_conv", 2,-0.5,1.5);
+  hRecovered_EE_conv = fs->make<TH1F>("recovered_EE_conv", "EE_conv", 2,-0.5,1.5); 
+
+  hZeeMass=fs->make<TH1F>("hZeeMass", "Zee Inv Mass", 80, 50, 130);
+  hRecovered_ZeeMass=fs->make<TH1F>("hRecovered_ZeeMass", "Zee Inv Mass, recov", 80, 50, 130);
 
   typedef reco::Candidate::LorentzVector LorentzVector;
 }
@@ -152,11 +190,11 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   iEvent.getByToken(beamSpotToken_,theBeamSpot);  
   
   // Get electrons
-  //   edm::Handle<edm::View<reco::GsfElectron> > electrons;
-  //   iEvent.getByToken(electronsToken_, electrons);
+  edm::Handle<reco::GsfElectronCollection > electrons;
+  iEvent.getByToken(electronsToken_, electrons);
   // Get electrons
-   edm::Handle<pat::ElectronCollection > patelectrons;
-   iEvent.getByToken(patElectronsToken_, patelectrons);
+   // edm::Handle<pat::ElectronCollection > patelectrons;
+   // iEvent.getByToken(patElectronsToken_, patelectrons);
    
   // Get MC collection
   Handle<edm::View<reco::GenParticle> > genParticles;
@@ -165,6 +203,12 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   // Get PV
   edm::Handle<reco::VertexCollection> vertices;
   iEvent.getByToken(vtxToken_, vertices);
+
+  edm::Handle<EcalRecHitCollection> rechit_EB_col;
+  iEvent.getByToken(rechits_EB_,rechit_EB_col);
+
+  hEventCount->Fill(1);
+
   if (vertices->empty()) return; // skip the event if no PV found
   
 
@@ -184,26 +228,18 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   }
   if ( firstGoodVertex==vertices->end() ) return; // skip event if there are no good PVs
 
+  
+
+
   // // Get the conversions collection
   // edm::Handle<reco::ConversionCollection> conversions;
   // iEvent.getByToken(conversionsToken_, conversions);
 
   int i=0; 
-  for (pat::ElectronCollection::const_iterator it = patelectrons->begin(); it != patelectrons->end(); it++){
+  for (reco::GsfElectronCollection::const_iterator it = electrons->begin(); it != electrons->end(); it++){
+    bool isRecovered=false;
     //std::cout << "cut based id " << it->userInt("cutbasedID_veto")<< std::endl;
-
-    for (pat::ElectronCollection::const_iterator jt = it+1; jt != patelectrons->end(); jt++){
-      pat::CompositeCandidate diele;
-      diele.addDaughter(*it);
-      diele.addDaughter(*jt);
-      reco::Candidate::LorentzVector zp4 = it->p4() + jt->p4();
-      diele.setP4(zp4);
-      if (abs( diele.p4().M() - 91)<20) std::cout << iEvent.id().event() << " electronsize "<< patelectrons->size()<<  ", mass  " << diele.p4().M() << ", electron "<< i<< ", pt "<< it->pt() << " ID Veto " <<it->userInt("cutbasedID_veto") << ", electron "<< i+1 << jt->pt() << " ID Veto " <<jt->userInt("cutbasedID_veto") << std::endl;   
-
-    }
-
-    h_eID ->Fill (it->userInt("cutbasedID_veto")); 
-    
+    //h_eID ->Fill (it->userInt("cutbasedID_veto"));  
     //  }
 
     //  // Loop over electrons
@@ -211,9 +247,52 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     //    const auto el = electrons->ptrAt(i);
     const auto el=it; 
     // acceptance
-    if( el->pt() < 5 ) continue;
+    if( el->pt() < 1 ) continue;
     if( fabs(el->eta()) > 2.5 ) continue;
 
+    const std::vector< std::pair< DetId, float > > hitAndFr_v = el->superCluster()->hitsAndFractions() ;
+    for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+      EBDetId idCurrent= hitAndFr_v[ii].first ;
+      edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
+      if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+	std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) << std::endl;
+	isRecovered=true;
+	break;
+      }
+
+    }
+     
+
+    bool isRecovered2=false;
+    for (reco::GsfElectronCollection::const_iterator jt = it+1; jt != electrons->end(); jt++){
+      if (jt->pt()< 1 ) continue;
+      if( fabs(jt->eta()) > 2.5 ) continue;
+      if (isRecovered==false){
+	const std::vector< std::pair< DetId, float > > hitAndFr_v = jt->superCluster()->hitsAndFractions() ;
+	for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+	  EBDetId idCurrent= hitAndFr_v[ii].first ;
+	  edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
+	  if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+	    std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) << std::endl;
+	    isRecovered2=true;
+	    break;
+	  }
+	  
+	}
+      }
+      //pat::CompositeCandidate diele;
+      //diele.addDaughter(*it);
+      //diele.addDaughter(*jt);
+      reco::Candidate::LorentzVector zp4 = it->p4() + jt->p4();
+      //diele.setP4(zp4);
+      if (abs( zp4.M() - 91)<20){
+	//std::cout << iEvent.id().event() << " electronsize "<< electrons->size()<<  ", mass  " << zp4.M() << ", electron "<< i<< ", pt "<< it->pt() << ", electron "<< i+1 << jt->pt() << std::endl;   
+	hZeeMass->Fill( zp4.M());
+	if (isRecovered==true ||  isRecovered2==true) hRecovered_ZeeMass->Fill( zp4.M());
+
+      }
+      
+    }
 
     // MC truth match
     //    if (isMC==true) h_isTrue -> Fill(matchToTruth( el, genParticles));
@@ -246,6 +325,32 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     else
       h_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
     
+
+    if (isRecovered==true){
+      hRecovered_eta -> Fill(scEta);
+      hRecovered_phi -> Fill(scPhi);
+      if (fabs(scEta)<1.5) {
+	hRecovered_EB_pt -> Fill(el->pt());
+	hRecovered_EB_rawEne -> Fill( el->superCluster()->rawEnergy() );
+	hRecovered_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
+	hRecovered_EB_r9 -> Fill( el->r9() );  
+	hRecovered_EB_r9uz -> Fill( el->r9() );  
+	hRecovered_EB_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+      } else {
+	hRecovered_EE_pt -> Fill(el->pt());
+	hRecovered_EE_rawEne -> Fill( el->superCluster()->rawEnergy() );
+	hRecovered_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
+	hRecovered_EE_r9 -> Fill( el->r9() );  
+	hRecovered_EE_r9uz -> Fill( el->r9() );  
+	hRecovered_EE_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+      }
+      
+      if (fabs(scEta)<1.5)
+	hRecovered_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+      else
+	hRecovered_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+    }
+
     // // Conversion rejection
     // bool passConvVeto = !ConversionTools::hasMatchedConversion(*el, conversions, theBeamSpot->position());
     // if (fabs(scEta)<1.5)   
