@@ -90,7 +90,8 @@ private:
   TH1F *hRecovered_EB_hoe, *hRecovered_EE_hoe;
   TH1F *hRecovered_EB_dz, *hRecovered_EE_dz;
   TH1F *hRecovered_EB_conv, *hRecovered_EE_conv;
-  TH1F *hZeeMass, *hRecovered_ZeeMass,*hEventCount; 
+
+  TH1F *hZeeMass, *hZMassRawEn, *hRecovered_ZeeMass, *hRecoverd_ZMassRawEn, *hEventCount; 
 };
 
 ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
@@ -170,8 +171,10 @@ ElectronPlots::ElectronPlots(const edm::ParameterSet& iConfig) {
   hRecovered_EB_conv = fs->make<TH1F>("recovered_EB_conv", "EB_conv", 2,-0.5,1.5);
   hRecovered_EE_conv = fs->make<TH1F>("recovered_EE_conv", "EE_conv", 2,-0.5,1.5); 
 
-  hZeeMass=fs->make<TH1F>("hZeeMass", "Zee Inv Mass", 80, 50, 130);
-  hRecovered_ZeeMass=fs->make<TH1F>("hRecovered_ZeeMass", "Zee Inv Mass, recov", 80, 50, 130);
+  hZeeMass=fs->make<TH1F>("hZeeMass", "Zee Inv Mass", 100, 0, 200);
+  hZMassRawEn=fs->make<TH1F>("hZMassRawEn", "Zee Inv Mass, rawEn", 100, 0, 200);
+  hRecovered_ZeeMass=fs->make<TH1F>("hRecovered_ZeeMass", "Zee Inv Mass, recov", 100, 0, 200);
+  hRecoverd_ZMassRawEn=fs->make<TH1F>("hRecoverd_ZMassRawEn", "Zee Inv Mass, recov, rawEn", 100, 0, 200);
 
   typedef reco::Candidate::LorentzVector LorentzVector;
 }
@@ -267,28 +270,45 @@ void ElectronPlots::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     for (reco::GsfElectronCollection::const_iterator jt = it+1; jt != electrons->end(); jt++){
       if (jt->pt()< 1 ) continue;
       if( fabs(jt->eta()) > 2.5 ) continue;
-      if (isRecovered==false){
-	const std::vector< std::pair< DetId, float > > hitAndFr_v = jt->superCluster()->hitsAndFractions() ;
-	for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
-	  EBDetId idCurrent= hitAndFr_v[ii].first ;
-	  edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
-	  if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
-	    std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) << std::endl;
-	    isRecovered2=true;
-	    break;
-	  }
-	  
+      const std::vector< std::pair< DetId, float > > hitAndFr_v = jt->superCluster()->hitsAndFractions() ;
+      for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+	EBDetId idCurrent= hitAndFr_v[ii].first ;
+	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
+	if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+	  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) << std::endl;
+	  isRecovered2=true;
+	  break;
 	}
+	  
       }
+      
       //pat::CompositeCandidate diele;
       //diele.addDaughter(*it);
       //diele.addDaughter(*jt);
+      reco::Candidate::LorentzVector e1p4(0,0,0,0);
+      reco::Candidate::LorentzVector e2p4(0,0,0,0);
+      
+      // if (isRecovered==true){
+	e1p4.SetPxPyPzE(it->gsfTrack()->momentum().x(),it->gsfTrack()->momentum().y(),it->gsfTrack()->momentum().z(), it->superCluster()->rawEnergy() );
+      // } else {
+      //   e1p4= it->p4();
+      // }
+      // if (isRecovered2==true){
+	e2p4.SetPxPyPzE(jt->gsfTrack()->momentum().x(),jt->gsfTrack()->momentum().y(),jt->gsfTrack()->momentum().z(), jt->superCluster()->rawEnergy() );
+      // } else {
+      // 	e2p4= jt->p4();
+      // }
       reco::Candidate::LorentzVector zp4 = it->p4() + jt->p4();
+      reco::Candidate::LorentzVector zRawp4=e1p4+e2p4;
       //diele.setP4(zp4);
       if (abs( zp4.M() - 91)<20){
 	//std::cout << iEvent.id().event() << " electronsize "<< electrons->size()<<  ", mass  " << zp4.M() << ", electron "<< i<< ", pt "<< it->pt() << ", electron "<< i+1 << jt->pt() << std::endl;   
 	hZeeMass->Fill( zp4.M());
-	if (isRecovered==true ||  isRecovered2==true) hRecovered_ZeeMass->Fill( zp4.M());
+	hZMassRawEn->Fill( zRawp4.M());
+	if (isRecovered==true ||  isRecovered2==true) {
+	  hRecovered_ZeeMass->Fill( zp4.M());
+	  hRecoverd_ZMassRawEn->Fill( zRawp4.M());
+	}
 
       }
       
