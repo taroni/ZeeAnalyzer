@@ -92,8 +92,8 @@ private:
   
   Float_t     mcGenWeight; ///< weight in generator for MC
     
-  float e1Charge; 
-  float e2Charge; 
+  int e1Charge; 
+  int e2Charge; 
   
   Float_t   e1Eta;
   Float_t   e1Phi;
@@ -105,6 +105,8 @@ private:
   float   e1SeedIPhi;
   float   e2SeedIEta;
   float   e2SeedIPhi;
+  float e1SigmaIetaIeta;
+  float e2SigmaIetaIeta;
   Float_t   e1EtaSC;
   Float_t   e2EtaSC;
   Float_t   e1PhiSC;
@@ -222,24 +224,28 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   
 
   // ele
-  tree->Branch("e1Charge",   &e1Charge,    "e1Charge/F");
+  tree->Branch("e1Charge",   &e1Charge,    "e1Charge/I");
   tree->Branch("e1Eta",      &e1Eta,       "e1Eta/F");
   tree->Branch("e1Phi",      &e1Phi,       "e1Phi/F");
   tree->Branch("e1R9",       &e1R9,       "e1R9/F");
-  tree->Branch("e2Charge",   &e2Charge,    "e2Charge/F");
+  tree->Branch("e2Charge",   &e2Charge,    "e2Charge/I");
   tree->Branch("e2Eta",      &e2Eta,       "e2Eta/F");
   tree->Branch("e2Phi",      &e2Phi,       "e2Phi/F");
   tree->Branch("e2R9",       &e2R9,       "e2R9/F");
-  
+  tree->Branch("e1SigmaIetaIeta", &e1SigmaIetaIeta, "e1SigmaIetaIeta/F");
+  tree->Branch("e2SigmaIetaIeta", &e2SigmaIetaIeta, "e2SigmaIetaIeta/F");
+
   
 	// SC
   tree->Branch("e1EtaSC",      &e1EtaSC,       "e1EtaSC/F");
   tree->Branch("e1PhiSC",      &e1PhiSC,       "e1PhiSC/F");
+  tree->Branch("e1Energy",     &e1Energy,      "e1EnergySC/F");
   tree->Branch("e1RawEnergy", &e1RawEnergy, "e1RawEnergySC/F");
   // tree->Branch("e1energy5x5SC", e1energy5x5SC, "e1energy5x5SC/F");
   // tree->Branch("e1energy3x3SC", e1energy3x3SC, "e1energy3x3SC/F");
   tree->Branch("e2EtaSC",      &e2EtaSC,       "e2EtaSC/F");
   tree->Branch("e2PhiSC",      &e2PhiSC,       "e2PhiSC/F");
+  tree->Branch("e2Energy",     &e2Energy,      "e2EnergySC/F");
   tree->Branch("e2RawEnergy", &e2RawEnergy, "e2RawEnergySC/F");
   // tree->Branch("e2energy5x5SC", e2energy5x5SC, "e2energy5x5SC/F");
   // tree->Branch("e2energy3x3SC", e2energy3x3SC, "e2energy3x3SC/F");
@@ -361,13 +367,16 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
  
       
-  e1Charge=0.; 
-  e2Charge=0.; 
+  e1Charge=-2.; 
+  e2Charge=-2.; 
    
   e1Eta=-99.;
   e1Phi=-99.;
   e1Phi=-99.;
   e1R9=-99.;
+  e1SigmaIetaIeta=-99.;
+  e2SigmaIetaIeta=-99.;
+  
   e1EtaSC=-99.;
   e2EtaSC=-99.;
   e1PhiSC=-99.;
@@ -381,6 +390,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   e2RawEnergy=-99.;
   e2Energy3x3SC=-99.;
   e2Energy5x5SC=-99.;
+  
 
   e1SeedIEta=-99.;
   e2SeedIEta=-99.;
@@ -523,14 +533,18 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
        	  h_ZMassRawEn->Fill(invMass_rawSC);
 	}
  	mcGenWeight=-1.;
-       	e1Charge=(float)it->charge();
-	e2Charge=(float)jt->charge();
+       	e1Charge=(int)it->charge();
+	e2Charge=(int)jt->charge();
+	std::cout << "e1 charge "<< e1Charge << " "<< it->charge() << ", e2 charge "<< e2Charge << " "<< jt->charge() << std::endl;
   	e1Eta=it->eta();
 	e2Eta=jt->eta();
   	e1Phi=it->phi();
 	e2Phi=jt->phi();
 	e1R9=it->r9();
 	e2R9=jt->r9();
+	e1SigmaIetaIeta=it->full5x5_sigmaIetaIeta();
+	e2SigmaIetaIeta=jt->full5x5_sigmaIetaIeta();
+	  
 	e1EtaSC=it->superCluster()->eta();
 	e2EtaSC=jt->superCluster()->eta();
 	e1PhiSC=it->superCluster()->phi();
