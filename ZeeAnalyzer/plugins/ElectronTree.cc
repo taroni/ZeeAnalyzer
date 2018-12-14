@@ -235,7 +235,8 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   tree->Branch("e1SigmaIetaIeta", &e1SigmaIetaIeta, "e1SigmaIetaIeta/F");
   tree->Branch("e2SigmaIetaIeta", &e2SigmaIetaIeta, "e2SigmaIetaIeta/F");
 
-  
+  tree->Branch("e1GenEnergy", &e1GenEnergy, "e1GenEnergy/F");
+  tree->Branch("e2GenEnergy", &e2GenEnergy, "e2GenEnergy/F");
 	// SC
   tree->Branch("e1EtaSC",      &e1EtaSC,       "e1EtaSC/F");
   tree->Branch("e1PhiSC",      &e1PhiSC,       "e1PhiSC/F");
@@ -483,7 +484,9 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       EBDetId idCurrent= hitAndFr_v[ii].first ;
       edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
       if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
-	//std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) << std::endl;
+	  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) <<  " " << hit->energy()<< std::endl;
+
+	  
 	isRecovered=true;
 	//break;
       }
@@ -501,7 +504,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	EBDetId idCurrent= hitAndFr_v[ii].first ;
 	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
 	if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
-	  //std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) << std::endl;
+	  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) <<  " " << hit->energy()<< std::endl;
 	  isRecovered2=true;
 	  //break;
 	}
@@ -522,7 +525,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       e2p4.SetPxPyPzE(jt->gsfTrack()->momentum().x(),jt->gsfTrack()->momentum().y(),jt->gsfTrack()->momentum().z(), jt->superCluster()->rawEnergy() );
       reco::Candidate::LorentzVector zp4 = it->p4() + jt->p4();
       //reco::Candidate::LorentzVector zRawp4=e1p4+e2p4;
-      if (abs( zp4.M() - 91)<20){
+      if (abs( zp4.M() - 91)<40){
        	hAll_ZeeMass->Fill( zp4.M());
        	hAll_ZMassRawEn->Fill(invMass_rawSC);
       	if (isRecovered==true ||  isRecovered2==true) {
@@ -532,6 +535,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       	  h_ZeeMass->Fill( zp4.M());
        	  h_ZMassRawEn->Fill(invMass_rawSC);
 	}
+	std::cout << "raw Mass " << invMass_rawSC << " e1 raw En " <<  it->superCluster()->rawEnergy() << " " << jt->superCluster()->rawEnergy() << std::endl;
  	mcGenWeight=-1.;
        	e1Charge=(int)it->charge();
 	e2Charge=(int)jt->charge();
@@ -568,11 +572,11 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
 	std::cout <<e1SeedIEta << " " <<  e1SeedIPhi << " " << e2SeedIEta <<  " "<< e2SeedIPhi << std::endl;
   	e1Energy=it->energy();
-	e1RawEnergy=it->superCluster()->rawEnergy();
+	e1RawEnergy=(float)it->superCluster()->rawEnergy();
 	//e1Energy3x3SC;
 	//e1Energy5x5SC;
 	e2Energy=jt->energy();
-	e2RawEnergy=jt->superCluster()->rawEnergy();
+	e2RawEnergy=(float)jt->superCluster()->rawEnergy();
 	//e2Energy3x3SC;
 	//e2Energy5x5SC;
   	e1Pt=it->pt();
