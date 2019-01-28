@@ -4,10 +4,15 @@
 <use name="DataFormats/EgammaCandidates"/>
 <use name="DataFormats/EgammaReco"/>
 <use name="CondFormats/EgammaObjects"/>
+<use name="CondFormats/EcalObjects"/>
 <use name="RecoEcal/EgammaCoreTools"/>
+<use   name="DataFormats/EcalRecHit"/>
+<use name="DataFormats/EcalDetId"/>
+<use name="CondFormats/DataRecord"/>
 <use name="RecoEgamma/EgammaTools"/>
 <use name="DataFormats/HepMCCandidate"/>
 <use name="SimGeneral/HepPDTRecord"/>
+<use name="PhysicsTools/Utilities"/>
 <use name="CommonTools/Utils"/>
 <use name="CommonTools/UtilAlgos"/>
 <use name="DataFormats/FWLite"/>

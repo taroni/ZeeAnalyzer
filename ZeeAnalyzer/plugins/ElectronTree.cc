@@ -6,6 +6,8 @@
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
@@ -36,7 +38,12 @@
 #include "TTree.h"
 #include "Math/VectorUtil.h"
 #include "TVector3.h"
+#include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "CondFormats/DataRecord/interface/EcalChannelStatusRcd.h"
+#include "CondFormats/EcalObjects/interface/EcalChannelStatus.h"
 
 #define NELE 3
 #define initFloat     {-999.,-999.,-999.}
@@ -69,7 +76,13 @@ private:
 				  int &ancestorPID, int &ancestorStatus);
   
   // ----------member data ---------------------------
-  
+  edm::LumiReWeighting LumiWeights_;  
+
+  bool isRecovered2;
+  bool isDead2;
+  bool isRecovered;
+  bool isDead;
+
   bool isMC=false; 
   // Data members
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
@@ -80,6 +93,7 @@ private:
   edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
   edm::EDGetTokenT<reco::ConversionCollection> conversionsToken_;
   edm::EDGetTokenT<EcalRecHitCollection> rechits_EB_;
+  edm::EDGetTokenT<std::vector<PileupSummaryInfo> > pileupSummaryToken_ ;
 
   TFile *tree_file;
   TTree * tree; 
@@ -89,7 +103,9 @@ private:
   Long64_t    eventNumber;	///< event number
   UInt_t	eventTime;		///< unix time of the event
   UShort_t	      nBX;			///< bunch crossing
+  int    	nTruePU;		///< pu
   
+  float  MyWeight;
   Float_t     mcGenWeight; ///< weight in generator for MC
     
   int e1Charge; 
@@ -133,6 +149,9 @@ private:
   Int_t e1IsDead, e1IsRecovered;
   Int_t e2IsDead, e2IsRecovered;
 
+  std::vector<int> vkGood,    vkPoorReco,    vkOutOfTimE,    vkFaultyHardware,    vkNoisy,    vkPoorCalib,    vkSaturated,    vkLeadingEdgeRecovered,    vkNeighboursRecovered,    vkTowerRecovered,    vkDead,    vkKilled,    vkTPSaturated,    vkL1SpikeFlag,    vkWeird,    vkDiWeird,    vkHasSwitchToGain6,    vkHasSwitchToGain1,    vkUnknown, vIeta, vIphi, vIsm, vIc;
+  std::vector<float> vXtalEn;             
+
   // Histos
   TH1F *h_eta, *h_phi, *h_isTrue, *h_eID;
   TH1F *h_EB_pt, *h_EE_pt;
@@ -172,6 +191,7 @@ private:
   TH1F * hAll_EB_eGenEn;
   TH1F * hAll_EB_eEnGenEnRatio;
 
+  TH1F * h_Flags, *h_FlagsGood; 
 
   TH1F *h_ZeeMass, *h_ZMassRawEn,*hAll_ZeeMass, *hAll_ZMassRawEn, *hRecovered_ZeeMass, *hRecoverd_ZMassRawEn, *hEventCount; 
 };
@@ -209,7 +229,11 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
 
   rechits_EB_=consumes<EcalRecHitCollection>(iConfig.getParameter<edm::InputTag>("inputRecHitsEB"));
 
+  pileupSummaryToken_ = consumes<std::vector<PileupSummaryInfo> >(edm::InputTag("addPileupInfo"));
+
   edm::Service<TFileService> fs;
+
+
  
 	//now do what ever initialization is needed
   tree = fs->make<TTree>("selected", "selected");
@@ -221,6 +245,8 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   tree->Branch("eventNumber",   &eventNumber, "eventNumber/l");
   tree->Branch("eventTime",     &eventTime,   "eventTime/i");
   tree->Branch("nBX",           &nBX,         "nBX/s");
+  tree->Branch("nTruePU",       &nTruePU,         "nTruePU/I");
+  tree->Branch("puweight",       &MyWeight,         "puWeight/F");
   
 
   // ele
@@ -264,6 +290,35 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   tree->Branch("e1SeedIPhi", &e1SeedIPhi, "e1SeedIPhi/F");
   tree->Branch("e2SeedIPhi", &e2SeedIPhi, "e2SeedIPhi/F");
 
+  tree->Branch("kGood"                ,&vkGood                );
+  tree->Branch("kPoorReco"            ,&vkPoorReco            );
+  tree->Branch("kOutOfTimE"           ,&vkOutOfTimE           );
+  tree->Branch("kFaultyHardware"      ,&vkFaultyHardware      );
+  tree->Branch("kNoisy"               ,&vkNoisy               );
+  tree->Branch("kPoorCalib"           ,&vkPoorCalib           );
+  tree->Branch("kSaturated"           ,&vkSaturated           );
+  tree->Branch("kLeadingEdgeRecovered",&vkLeadingEdgeRecovered);
+  tree->Branch("kNeighboursRecovered" ,&vkNeighboursRecovered );
+  tree->Branch("kTowerRecovered"      ,&vkTowerRecovered      );
+  tree->Branch("kDead"                ,&vkDead                );
+  tree->Branch("kKilled"              ,&vkKilled              );
+  tree->Branch("kTPSaturated"         ,&vkTPSaturated         );
+  tree->Branch("kL1SpikeFlag"         ,&vkL1SpikeFlag         );
+  tree->Branch("kWeird"               ,&vkWeird               );
+  tree->Branch("kDiWeird"             ,&vkDiWeird             );
+  tree->Branch("kHasSwitchToGain6"    ,&vkHasSwitchToGain6    );
+  tree->Branch("kHasSwitchToGain1"    ,&vkHasSwitchToGain1    );
+  tree->Branch("kUnknown"             ,&vkUnknown             );  
+
+  tree->Branch("xtalIeta",&vIeta );  
+  tree->Branch("xtalIphi",&vIphi );  
+  tree->Branch("xtalIsm",&vIsm );  
+  tree->Branch("xtalIc",&vIc );  
+  tree->Branch("xtalEn",&vXtalEn);
+
+
+  h_Flags= fs->make<TH1F>("hFlags", "hFlags", 20, 0, 20);
+  h_FlagsGood= fs->make<TH1F>("hFlagsGood", "hFlagsGood", 20, 0, 20);
 
   hEventCount = fs->make<TH1F>("hEventCount", "hEventCount", 3, -0.5, 2.5);
   h_eta = fs->make<TH1F>("eta", "eta", 50,-2.5,2.5);
@@ -348,6 +403,12 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
 
 
   typedef reco::Candidate::LorentzVector LorentzVector;
+
+  LumiWeights_ = edm::LumiReWeighting("/afs/cern.ch/work/t/taroni/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/puMC_JuneProjectionFull18_PoissonOOTPU.root",
+                                      "/afs/cern.ch/work/t/taroni/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/MyDataPileupHistogram.root",
+                                      "puMC",
+                                      "pileup");
+
 }
 
 
@@ -358,7 +419,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   using namespace std;
   using namespace edm;
   using namespace reco;
-
+  using namespace cms;
   runNumber=iEvent.id().run();
   lumiBlock=(UShort_t)iEvent.id().luminosityBlock();
   eventNumber=(Long64_t) iEvent.id().event();
@@ -366,7 +427,8 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   eventTime= (UInt_t) time.unixTime();
   nBX=(UShort_t) iEvent.bunchCrossing();	
 
- 
+  vector<int> vkGood_,    vkPoorReco_,    vkOutOfTimE_,    vkFaultyHardware_,    vkNoisy_,    vkPoorCalib_,    vkSaturated_,    vkLeadingEdgeRecovered_,    vkNeighboursRecovered_,    vkTowerRecovered_,    vkDead_,    vkKilled_,    vkTPSaturated_,    vkL1SpikeFlag_,    vkWeird_,    vkDiWeird_,    vkHasSwitchToGain6_,    vkHasSwitchToGain1_,    vkUnknown_, vIeta_, vIphi_, vIsm_, vIc_;
+  vector<float> vXtalEn_;
       
   e1Charge=-2.; 
   e2Charge=-2.; 
@@ -413,6 +475,36 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   e2IsDead=-99.;
   e2IsRecovered=-99.;
 
+
+  edm::Handle<std::vector<PileupSummaryInfo> > PupInfo;
+  
+
+
+  std::vector<PileupSummaryInfo>::const_iterator PVI;
+  nTruePU=1;
+  if (isMC==true){
+    iEvent.getByToken(pileupSummaryToken_, PupInfo);
+
+    //float Tnpv = -1;
+    for(PVI = PupInfo->begin(); PVI != PupInfo->end(); ++PVI) {
+      
+      int BX = PVI->getBunchCrossing();
+      
+      if(BX == 0) { 
+	nTruePU = PVI->getTrueNumInteractions();
+	continue;
+      }
+      
+    }
+  }
+  MyWeight=1;
+  if (isMC==true) MyWeight = LumiWeights_.weight( nTruePU );
+  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ <<  " " << MyWeight << std::endl;
+
+  edm::ESHandle<EcalChannelStatus> chStatus;
+  iSetup.get<EcalChannelStatusRcd>().get(chStatus);
+  const EcalChannelStatus* ecs = nullptr;
+  if( chStatus.isValid() ) ecs = chStatus.product();
   // Get the beam spot
   edm::Handle<reco::BeamSpot> theBeamSpot;
   iEvent.getByToken(beamSpotToken_,theBeamSpot);  
@@ -454,9 +546,9 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       break;
     }
   }
+
   if ( firstGoodVertex==vertices->end() ) return; // skip event if there are no good PVs
 
-  
 
 
   // // Get the conversions collection
@@ -465,8 +557,8 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
   int i=0; 
   for (reco::GsfElectronCollection::const_iterator it = electrons->begin(); it != electrons->end(); it++){
-    bool isRecovered=false;
-    bool isDead = false;
+    isRecovered=false;
+    isDead = false;
     //std::cout << "cut based id " << it->userInt("cutbasedID_veto")<< std::endl;
     //h_eID ->Fill (it->userInt("cutbasedID_veto"));  
     //  }
@@ -478,25 +570,95 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     // acceptance
     if( el->pt() < 1 ) continue;
     if( fabs(el->eta()) > 2.5 ) continue;
+    std::cout << "=============" << std::endl;
+
+    std::cout << "event: "<<    runNumber<< " "<< lumiBlock << " " << eventNumber << std::endl;
 
     const std::vector< std::pair< DetId, float > > hitAndFr_v = el->superCluster()->hitsAndFractions() ;
     for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
       EBDetId idCurrent= hitAndFr_v[ii].first ;
+      
       edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
+      
+ 
+
       if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+	for (int i=0; i< 19 ; i++){
+	  std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
+	  if (hit->checkFlag(i)==1) h_Flags -> Fill(i);
+	  if (i!=0 && hit->checkFlag(0)==1 && hit->checkFlag(i)==1) h_FlagsGood -> Fill(i);
+
+	}
+	std::cout << std::endl;
+	
+	std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << ", " 
+		  << "kPoorReco		  " << hit->checkFlag(EcalRecHit::kPoorReco)		  << ", "
+		  << "kOutOfTimE		  " << hit->checkFlag(EcalRecHit::kOutOfTime)		  << ", "
+		  << "kFaultyHardware	  " << hit->checkFlag(EcalRecHit::kFaultyHardware)	  << ", "
+		  << "kNoisy		  " << hit->checkFlag(EcalRecHit::kNoisy		 ) << ", "
+		<< "kPoorCalib		  " << hit->checkFlag(EcalRecHit::kPoorCalib		 ) << ", "
+		  << "kSaturated		  " << hit->checkFlag(EcalRecHit::kSaturated		 ) << ", "
+		  << "kLeadingEdgeRecovered " << hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  ) << ", "
+		  << "kNeighboursRecovered  " << hit->checkFlag(EcalRecHit::kNeighboursRecovered	 ) << ", "
+		  << "kTowerRecovered	  " << hit->checkFlag(EcalRecHit::kTowerRecovered	 ) << ", "
+		  << "kDead		  " << hit->checkFlag(EcalRecHit::kDead		  	 ) << ", "
+		  << "kKilled		  " << hit->checkFlag(EcalRecHit::kKilled		 ) << ", "
+		<< "kTPSaturated	  " << hit->checkFlag(EcalRecHit::kTPSaturated		 ) << ", "
+		  << "kL1SpikeFlag	  " << hit->checkFlag(EcalRecHit::kL1SpikeFlag		 ) << ", "
+		  << "kWeird		  " << hit->checkFlag(EcalRecHit::kWeird		 ) << ", "
+		  << "kDiWeird		  " << hit->checkFlag(EcalRecHit::kDiWeird		 ) << ", "
+		  << "kHasSwitchToGain6	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 ) << ", "
+		<< "kHasSwitchToGain1	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 ) << ", "
+		  << "kUnknown              " << hit->checkFlag(EcalRecHit::kUnknown)                << std::endl;  
+	
+	vkGood_.push_back(hit->checkFlag(EcalRecHit::kGood));
+	vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
+	vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
+	vkFaultyHardware_.push_back(hit->checkFlag(EcalRecHit::kFaultyHardware));
+	vkNoisy_.push_back(hit->checkFlag(EcalRecHit::kNoisy));
+	vkPoorCalib_.push_back(hit->checkFlag(EcalRecHit::kPoorCalib));
+	vkSaturated_.push_back(hit->checkFlag(EcalRecHit::kSaturated));
+	vkLeadingEdgeRecovered_.push_back(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered));
+	vkNeighboursRecovered_.push_back(hit->checkFlag(EcalRecHit::kNeighboursRecovered));
+	vkTowerRecovered_.push_back(hit->checkFlag(EcalRecHit::kTowerRecovered));
+	vkDead_.push_back(hit->checkFlag(EcalRecHit::kDead));    
+	vkKilled_.push_back(hit->checkFlag(EcalRecHit::kKilled));
+	vkTPSaturated_.push_back(hit->checkFlag(EcalRecHit::kTPSaturated));
+	vkL1SpikeFlag_.push_back(hit->checkFlag(EcalRecHit::kL1SpikeFlag));
+	vkWeird_.push_back(hit->checkFlag(EcalRecHit::kWeird));    
+	vkDiWeird_.push_back(hit->checkFlag(EcalRecHit::kDiWeird));
+	vkHasSwitchToGain6_.push_back(hit->checkFlag(EcalRecHit::kHasSwitchToGain6));    
+	vkHasSwitchToGain1_.push_back(hit->checkFlag(EcalRecHit::kHasSwitchToGain1));
+	vkUnknown_.push_back(hit->checkFlag(EcalRecHit::kUnknown));
+
+	vIeta_.push_back(idCurrent.ieta());
+	vIphi_.push_back(idCurrent.iphi());
+	vIsm_.push_back(idCurrent.ism());
+	vIc_.push_back(idCurrent.ic());
+	vXtalEn_.push_back(hit->energy());
+
+
+	EcalChannelStatusMap::const_iterator chit = ecs->find( idCurrent.rawId() );
+	EcalChannelStatusCode chStatusCode;
+	if ( chit != chStatus->end() ) {
+	  chStatusCode = *chit;
+	  std::cout << "Status code " << (chStatusCode.getStatusCode()== EcalChannelStatusCode::kFixedG0) << " "<< (chStatusCode.getStatusCode()== EcalChannelStatusCode::kNonRespondingIsolated)  << " " << (chStatusCode.getStatusCode()== EcalChannelStatusCode::kDeadVFE) << ", id "<< idCurrent  << " "<<std::endl; 
+	} 
+	std::cout<< endl;
 	  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) <<  " " << hit->energy()<< std::endl;
 
 	  
 	isRecovered=true;
 	//break;
       }
-      if( hit->checkFlag(EcalRecHit::kDead)) {
-	isDead=true;
-      }//kDead
+      // if( hit->checkFlag(EcalRecHit::kDead)) {
+      // 	isDead=true;
+      // }//kDead
     }
-    bool isRecovered2=false;
-    bool isDead2=false;
     for (reco::GsfElectronCollection::const_iterator jt = it+1; jt != electrons->end(); jt++){
+      isRecovered2=false;
+      isDead2=false;
+
       if (jt->pt()< 1 ) continue;
       if( fabs(jt->eta()) > 2.5 ) continue;
       const std::vector< std::pair< DetId, float > > hitAndFr_v = jt->superCluster()->hitsAndFractions() ;
@@ -504,13 +666,71 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	EBDetId idCurrent= hitAndFr_v[ii].first ;
 	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
 	if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+	  for (int i=0; i< 19 ; i++){
+	    std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
+	  }
+	  std::cout << std::endl;
+	  
+	  std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << ", " 
+		    << "kPoorReco		  " << hit->checkFlag(EcalRecHit::kPoorReco)		  << ", "
+		    << "kOutOfTimE		  " << hit->checkFlag(EcalRecHit::kOutOfTime)		  << ", "
+		    << "kFaultyHardware	  " << hit->checkFlag(EcalRecHit::kFaultyHardware)	  << ", "
+		    << "kNoisy		  " << hit->checkFlag(EcalRecHit::kNoisy		 ) << ", "
+		    << "kPoorCalib		  " << hit->checkFlag(EcalRecHit::kPoorCalib		 ) << ", "
+		    << "kSaturated		  " << hit->checkFlag(EcalRecHit::kSaturated		 ) << ", "
+		    << "kLeadingEdgeRecovered " << hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  ) << ", "
+		    << "kNeighboursRecovered  " << hit->checkFlag(EcalRecHit::kNeighboursRecovered	 ) << ", "
+		    << "kTowerRecovered	  " << hit->checkFlag(EcalRecHit::kTowerRecovered	 ) << ", "
+		    << "kDead		  " << hit->checkFlag(EcalRecHit::kDead		  	 ) << ", "
+		    << "kKilled		  " << hit->checkFlag(EcalRecHit::kKilled		 ) << ", "
+		    << "kTPSaturated	  " << hit->checkFlag(EcalRecHit::kTPSaturated		 ) << ", "
+		    << "kL1SpikeFlag	  " << hit->checkFlag(EcalRecHit::kL1SpikeFlag		 ) << ", "
+		    << "kWeird		  " << hit->checkFlag(EcalRecHit::kWeird		 ) << ", "
+		    << "kDiWeird		  " << hit->checkFlag(EcalRecHit::kDiWeird		 ) << ", "
+		    << "kHasSwitchToGain6	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 ) << ", "
+		    << "kHasSwitchToGain1	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 ) << ", "
+		    << "kUnknown              " << hit->checkFlag(EcalRecHit::kUnknown)                << std::endl;  
+	  
+	  vkGood_.push_back(hit->checkFlag(EcalRecHit::kGood));
+	  vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
+	  vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
+	  vkFaultyHardware_.push_back(hit->checkFlag(EcalRecHit::kFaultyHardware));
+	  vkNoisy_.push_back(hit->checkFlag(EcalRecHit::kNoisy));
+	  vkPoorCalib_.push_back(hit->checkFlag(EcalRecHit::kPoorCalib));
+	  vkSaturated_.push_back(hit->checkFlag(EcalRecHit::kSaturated));
+	  vkLeadingEdgeRecovered_.push_back(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered));
+	  vkNeighboursRecovered_.push_back(hit->checkFlag(EcalRecHit::kNeighboursRecovered));
+	  vkTowerRecovered_.push_back(hit->checkFlag(EcalRecHit::kTowerRecovered));
+	  vkDead_.push_back(hit->checkFlag(EcalRecHit::kDead));    
+	  vkKilled_.push_back(hit->checkFlag(EcalRecHit::kKilled));
+	  vkTPSaturated_.push_back(hit->checkFlag(EcalRecHit::kTPSaturated));
+	  vkL1SpikeFlag_.push_back(hit->checkFlag(EcalRecHit::kL1SpikeFlag));
+	  vkWeird_.push_back(hit->checkFlag(EcalRecHit::kWeird));    
+	  vkDiWeird_.push_back(hit->checkFlag(EcalRecHit::kDiWeird));
+	  vkHasSwitchToGain6_.push_back(hit->checkFlag(EcalRecHit::kHasSwitchToGain6));    
+	  vkHasSwitchToGain1_.push_back(hit->checkFlag(EcalRecHit::kHasSwitchToGain1));
+	  vkUnknown_.push_back(hit->checkFlag(EcalRecHit::kUnknown));
+	  
+	  vIeta_.push_back(idCurrent.ieta());
+	  vIphi_.push_back(idCurrent.iphi());
+	  vIsm_.push_back(idCurrent.ism());
+	  vIc_.push_back(idCurrent.ic());
+	  vXtalEn_.push_back(hit->energy());
+
+	  EcalChannelStatusMap::const_iterator chit = ecs->find( idCurrent.rawId() );
+	  EcalChannelStatusCode chStatusCode;
+	  if ( chit != chStatus->end() ) {
+	    chStatusCode = *chit;
+	    
+	    std::cout << "Status code " << (chStatusCode.getStatusCode()== EcalChannelStatusCode::kFixedG0) << " "<< (chStatusCode.getStatusCode()== EcalChannelStatusCode::kNonRespondingIsolated)  << " " << (chStatusCode.getStatusCode()== EcalChannelStatusCode::kDeadVFE) << ", id "<< idCurrent  << " "<<std::endl; 
+	  } 
 	  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << " " <<  idCurrent << " " << hit->checkFlag(EcalRecHit::kNeighboursRecovered) <<  " " << hit->energy()<< std::endl;
 	  isRecovered2=true;
 	  //break;
 	}
-	if( hit->checkFlag(EcalRecHit::kDead)) {
-	  isDead2=true;
-        }//kDead
+	// if( hit->checkFlag(EcalRecHit::kDead)) {
+	//   isDead2=true;
+        // }//kDead
       }
       double t1 = TMath::Exp(-it->eta());
       double t2 = TMath::Exp(-jt->eta());
@@ -526,14 +746,14 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       reco::Candidate::LorentzVector zp4 = it->p4() + jt->p4();
       //reco::Candidate::LorentzVector zRawp4=e1p4+e2p4;
       if (abs( zp4.M() - 91)<40){
-       	hAll_ZeeMass->Fill( zp4.M());
-       	hAll_ZMassRawEn->Fill(invMass_rawSC);
+       	hAll_ZeeMass->Fill( zp4.M(),MyWeight);
+       	hAll_ZMassRawEn->Fill(invMass_rawSC,MyWeight);
       	if (isRecovered==true ||  isRecovered2==true) {
-      	  hRecovered_ZeeMass->Fill( zp4.M());
-       	  hRecoverd_ZMassRawEn->Fill(invMass_rawSC);
+      	  hRecovered_ZeeMass->Fill( zp4.M(),MyWeight);
+       	  hRecoverd_ZMassRawEn->Fill(invMass_rawSC,MyWeight);
       	}else {
-      	  h_ZeeMass->Fill( zp4.M());
-       	  h_ZMassRawEn->Fill(invMass_rawSC);
+      	  h_ZeeMass->Fill( zp4.M(),MyWeight);
+       	  h_ZMassRawEn->Fill(invMass_rawSC,MyWeight);
 	}
 	std::cout << "raw Mass " << invMass_rawSC << " e1 raw En " <<  it->superCluster()->rawEnergy() << " " << jt->superCluster()->rawEnergy() << std::endl;
  	mcGenWeight=-1.;
@@ -591,10 +811,38 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	  e1GenEnergy=e1GenMatchEn.second;
 	  e2GenEnergy=e2GenMatchEn.second;
 	}
-	e1IsDead=(int)isDead;
+	// e1IsDead=(int)isDead;
 	e1IsRecovered=(int)isRecovered;
-	e2IsDead=(int) isDead2;
+	// e2IsDead=(int) isDead2;
 	e2IsRecovered=(int)isRecovered2;
+	std::cout << "kGood size " << vkGood_.size() << std::endl;
+	vkGood=		 vkGood_;
+	vkPoorReco=		 vkPoorReco_;
+	vkOutOfTimE=		 vkOutOfTimE_;
+	vkFaultyHardware=	 vkFaultyHardware_;
+	vkNoisy=		 vkNoisy_;
+	vkPoorCalib=		 vkPoorCalib_;
+	vkSaturated=		 vkSaturated_;
+	vkLeadingEdgeRecovered= vkLeadingEdgeRecovered_;
+	vkNeighboursRecovered= vkNeighboursRecovered_;
+	vkTowerRecovered=	 vkTowerRecovered_;
+	vkDead=		 vkDead_;
+	vkKilled=		 vkKilled_;
+	vkTPSaturated=		 vkTPSaturated_;
+	vkL1SpikeFlag=		 vkL1SpikeFlag_;
+	vkWeird=		 vkWeird_;
+	vkDiWeird=		 vkDiWeird_;
+	vkHasSwitchToGain6=	 vkHasSwitchToGain6_;
+	vkHasSwitchToGain1=	 vkHasSwitchToGain1_;
+	vkUnknown=              vkUnknown_;              
+
+
+	vIeta=vIeta_;
+	vIphi=vIphi_;
+	vIsm=vIsm_;
+	vIc=vIc_;
+	vXtalEn=vXtalEn_;
+
 	//filling the tree
 	tree->Fill();
       }      
@@ -616,97 +864,97 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     // Kinematics and shower shapes
     float scEta = el->superCluster()->eta();
     float scPhi = el->superCluster()->phi();
-    hAll_eta -> Fill(scEta);
-    hAll_phi -> Fill(scPhi);
+    hAll_eta -> Fill(scEta,MyWeight);
+    hAll_phi -> Fill(scPhi,MyWeight);
     if (fabs(scEta)<1.5) {
-      hAll_EB_pt -> Fill(el->pt());
-      hAll_EB_rawEne -> Fill( el->superCluster()->rawEnergy() );
+      hAll_EB_pt -> Fill(el->pt(),MyWeight);
+      hAll_EB_rawEne -> Fill( el->superCluster()->rawEnergy() ,MyWeight);
       if (isMC==true && eMatch>0 && eGenEn!=0.) {
-	hAll_EB_rawGenEnRatio -> Fill( el->superCluster()->rawEnergy()/eGenEn );
-	hAll_EB_eGenEn->Fill(eGenEn);
-	hAll_EB_eEnGenEnRatio-> Fill( el->energy()/eGenEn );
+	hAll_EB_rawGenEnRatio -> Fill( el->superCluster()->rawEnergy()/eGenEn,MyWeight );
+	hAll_EB_eGenEn->Fill(eGenEn,MyWeight);
+	hAll_EB_eEnGenEnRatio-> Fill( el->energy()/eGenEn ,MyWeight);
       }
-      hAll_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
-      hAll_EB_r9 -> Fill( el->r9() );  
-      hAll_EB_r9uz -> Fill( el->r9() );  
-      hAll_EB_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+      hAll_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ,MyWeight); 
+      hAll_EB_r9 -> Fill( el->r9() ,MyWeight);  
+      hAll_EB_r9uz -> Fill( el->r9() ,MyWeight);  
+      hAll_EB_hoe -> Fill( el->full5x5_hcalOverEcal() ,MyWeight);  
     } else {
-      hAll_EE_pt -> Fill(el->pt());
-      hAll_EE_rawEne -> Fill( el->superCluster()->rawEnergy() );
-      hAll_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
-      hAll_EE_r9 -> Fill( el->r9() );  
-      hAll_EE_r9uz -> Fill( el->r9() );  
-      hAll_EE_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+      hAll_EE_pt -> Fill(el->pt(),MyWeight);
+      hAll_EE_rawEne -> Fill( el->superCluster()->rawEnergy() ,MyWeight);
+      hAll_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ,MyWeight); 
+      hAll_EE_r9 -> Fill( el->r9(),MyWeight );  
+      hAll_EE_r9uz -> Fill( el->r9() ,MyWeight);  
+      hAll_EE_hoe -> Fill( el->full5x5_hcalOverEcal() ,MyWeight);  
     }
 
     // Impact parameter
     reco::GsfTrackRef theTrack = el->gsfTrack();
     if (fabs(scEta)<1.5)
-      hAll_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+      hAll_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) ,MyWeight);
     else
-      hAll_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+      hAll_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) ,MyWeight);
     
 
     if (isRecovered==true){
-      hRecovered_eta -> Fill(scEta);
-      hRecovered_phi -> Fill(scPhi);
+      hRecovered_eta -> Fill(scEta,MyWeight);
+      hRecovered_phi -> Fill(scPhi,MyWeight);
       if (fabs(scEta)<1.5) {
-	hRecovered_EB_pt -> Fill(el->pt());
-	hRecovered_EB_rawEne -> Fill( el->superCluster()->rawEnergy() );
-	hRecovered_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
-	hRecovered_EB_r9 -> Fill( el->r9() );  
-	hRecovered_EB_r9uz -> Fill( el->r9() );  
-	hRecovered_EB_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+	hRecovered_EB_pt -> Fill(el->pt(),MyWeight);
+	hRecovered_EB_rawEne -> Fill( el->superCluster()->rawEnergy() ,MyWeight);
+	hRecovered_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ,MyWeight); 
+	hRecovered_EB_r9 -> Fill( el->r9() ,MyWeight);  
+	hRecovered_EB_r9uz -> Fill( el->r9() ,MyWeight);  
+	hRecovered_EB_hoe -> Fill( el->full5x5_hcalOverEcal(),MyWeight );  
 	if (isMC==true && eMatch>0 && eGenEn!=0.) {
-	  hRecovered_EB_rawGenEnRatio -> Fill( el->superCluster()->rawEnergy()/eGenEn );
-	  hRecovered_EB_eGenEn->Fill(eGenEn);
-	  hRecovered_EB_eEnGenEnRatio-> Fill( el->energy()/eGenEn );
+	  hRecovered_EB_rawGenEnRatio -> Fill( el->superCluster()->rawEnergy()/eGenEn ,MyWeight);
+	  hRecovered_EB_eGenEn->Fill(eGenEn,MyWeight);
+	  hRecovered_EB_eEnGenEnRatio-> Fill( el->energy()/eGenEn ,MyWeight );
 	}
 
       } else {
-	hRecovered_EE_pt -> Fill(el->pt());
-	hRecovered_EE_rawEne -> Fill( el->superCluster()->rawEnergy() );
-	hRecovered_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
-	hRecovered_EE_r9 -> Fill( el->r9() );  
-	hRecovered_EE_r9uz -> Fill( el->r9() );  
-	hRecovered_EE_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+	hRecovered_EE_pt -> Fill(el->pt(),MyWeight);
+	hRecovered_EE_rawEne -> Fill( el->superCluster()->rawEnergy() ,MyWeight);
+	hRecovered_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ,MyWeight); 
+	hRecovered_EE_r9 -> Fill( el->r9(),MyWeight );  
+	hRecovered_EE_r9uz -> Fill( el->r9(),MyWeight );  
+	hRecovered_EE_hoe -> Fill( el->full5x5_hcalOverEcal(),MyWeight );  
       }
       
       if (fabs(scEta)<1.5)
-	hRecovered_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+	hRecovered_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ),MyWeight );
       else
-	hRecovered_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+	hRecovered_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ),MyWeight );
     }else{
       h_eta -> Fill(scEta);
       h_phi -> Fill(scPhi);
       if (fabs(scEta)<1.5) {
-	h_EB_pt -> Fill(el->pt());
-	h_EB_rawEne -> Fill( el->superCluster()->rawEnergy() );
-	h_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
-	h_EB_r9 -> Fill( el->r9() );  
-	h_EB_r9uz -> Fill( el->r9() );  
-	h_EB_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+	h_EB_pt -> Fill(el->pt(),MyWeight);
+	h_EB_rawEne -> Fill( el->superCluster()->rawEnergy(),MyWeight );
+	h_EB_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ,MyWeight ); 
+	h_EB_r9 -> Fill( el->r9() ,MyWeight);  
+	h_EB_r9uz -> Fill( el->r9(),MyWeight );  
+	h_EB_hoe -> Fill( el->full5x5_hcalOverEcal() ,MyWeight);  
 	if (isMC==true && eMatch>0 && eGenEn!=0.) {
-	  h_EB_rawGenEnRatio -> Fill( el->superCluster()->rawEnergy()/eGenEn );
-	  h_EB_eGenEn->Fill(eGenEn);
-	  h_EB_eEnGenEnRatio-> Fill( el->energy()/eGenEn );
+	  h_EB_rawGenEnRatio -> Fill( el->superCluster()->rawEnergy()/eGenEn ,MyWeight);
+	  h_EB_eGenEn->Fill(eGenEn,MyWeight);
+	  h_EB_eEnGenEnRatio-> Fill( el->energy()/eGenEn ,MyWeight);
 	}
 
       } else {
-	h_EE_pt -> Fill(el->pt());
-	h_EE_rawEne -> Fill( el->superCluster()->rawEnergy() );
-	h_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ); 
-	h_EE_r9 -> Fill( el->r9() );  
-	h_EE_r9uz -> Fill( el->r9() );  
-	h_EE_hoe -> Fill( el->full5x5_hcalOverEcal() );  
+	h_EE_pt -> Fill(el->pt(),MyWeight);
+	h_EE_rawEne -> Fill( el->superCluster()->rawEnergy() ,MyWeight);
+	h_EE_sigmaIeIe -> Fill( el->full5x5_sigmaIetaIeta() ,MyWeight); 
+	h_EE_r9 -> Fill( el->r9() ,MyWeight);  
+	h_EE_r9uz -> Fill( el->r9(),MyWeight );  
+	h_EE_hoe -> Fill( el->full5x5_hcalOverEcal(),MyWeight );  
       }
 
       // Impact parameter
       reco::GsfTrackRef theTrack = el->gsfTrack();
       if (fabs(scEta)<1.5)
-	h_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+	h_EB_dz -> Fill( theTrack->dz( firstGoodVertex->position() ),MyWeight );
       else
-	h_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ) );
+	h_EE_dz -> Fill( theTrack->dz( firstGoodVertex->position() ),MyWeight );
       
     }
 
