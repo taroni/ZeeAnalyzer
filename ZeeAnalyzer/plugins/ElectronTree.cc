@@ -149,7 +149,7 @@ private:
   Int_t e1IsDead, e1IsRecovered;
   Int_t e2IsDead, e2IsRecovered;
 
-  std::vector<int> vkGood,    vkPoorReco,    vkOutOfTimE,    vkFaultyHardware,    vkNoisy,    vkPoorCalib,    vkSaturated,    vkLeadingEdgeRecovered,    vkNeighboursRecovered,    vkTowerRecovered,    vkDead,    vkKilled,    vkTPSaturated,    vkL1SpikeFlag,    vkWeird,    vkDiWeird,    vkHasSwitchToGain6,    vkHasSwitchToGain1,    vkUnknown, vIeta, vIphi, vIsm, vIc;
+  std::vector<bool> vkGood,    vkPoorReco,    vkOutOfTimE,    vkFaultyHardware,    vkNoisy,    vkPoorCalib,    vkSaturated,    vkLeadingEdgeRecovered,    vkNeighboursRecovered,    vkTowerRecovered,    vkDead,    vkKilled,    vkTPSaturated,    vkL1SpikeFlag,    vkWeird,    vkDiWeird,    vkHasSwitchToGain6,    vkHasSwitchToGain1,    vkUnknown, vIeta, vIphi, vIsm, vIc;
   std::vector<float> vXtalEn;             
 
   // Histos
@@ -427,7 +427,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   eventTime= (UInt_t) time.unixTime();
   nBX=(UShort_t) iEvent.bunchCrossing();	
 
-  vector<int> vkGood_,    vkPoorReco_,    vkOutOfTimE_,    vkFaultyHardware_,    vkNoisy_,    vkPoorCalib_,    vkSaturated_,    vkLeadingEdgeRecovered_,    vkNeighboursRecovered_,    vkTowerRecovered_,    vkDead_,    vkKilled_,    vkTPSaturated_,    vkL1SpikeFlag_,    vkWeird_,    vkDiWeird_,    vkHasSwitchToGain6_,    vkHasSwitchToGain1_,    vkUnknown_, vIeta_, vIphi_, vIsm_, vIc_;
+  vector<bool> vkGood_,    vkPoorReco_,    vkOutOfTimE_,    vkFaultyHardware_,    vkNoisy_,    vkPoorCalib_,    vkSaturated_,    vkLeadingEdgeRecovered_,    vkNeighboursRecovered_,    vkTowerRecovered_,    vkDead_,    vkKilled_,    vkTPSaturated_,    vkL1SpikeFlag_,    vkWeird_,    vkDiWeird_,    vkHasSwitchToGain6_,    vkHasSwitchToGain1_,    vkUnknown_, vIeta_, vIphi_, vIsm_, vIc_;
   vector<float> vXtalEn_;
       
   e1Charge=-2.; 
@@ -580,9 +580,9 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       
       edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
       
- 
+      if (hit ==  rechit_EB_col->end()) continue;
 
-      if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+      if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
 	for (int i=0; i< 19 ; i++){
 	  std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
 	  if (hit->checkFlag(i)==1) h_Flags -> Fill(i);
@@ -590,28 +590,29 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
 	}
 	std::cout << std::endl;
+	std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << std::endl;
+
+	std::cout << "kGood " <<  bool(hit->checkFlag(EcalRecHit::kGood)) << ", " 
+		  << "kPoorReco		  " << bool(hit->checkFlag(EcalRecHit::kPoorReco))		  << ", "
+		  << "kOutOfTimE		  " <<bool( hit->checkFlag(EcalRecHit::kOutOfTime))		  << ", "
+		  << "kFaultyHardware	  " << bool(hit->checkFlag(EcalRecHit::kFaultyHardware))	  << ", "
+		  << "kNoisy		  " << bool(hit->checkFlag(EcalRecHit::kNoisy		 )) << ", "
+		  << "kPoorCalib		  " << bool(hit->checkFlag(EcalRecHit::kPoorCalib		 )) << ", "
+		  << "kSaturated		  " << bool(hit->checkFlag(EcalRecHit::kSaturated		 )) << ", "
+		  << "kLeadingEdgeRecovered " << bool(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  )) << ", "
+		  << "kNeighboursRecovered  " << bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered	 )) << ", "
+		  << "kTowerRecovered	  " << bool(hit->checkFlag(EcalRecHit::kTowerRecovered	 )) << ", "
+		  << "kDead		  " << bool(hit->checkFlag(EcalRecHit::kDead		  	 )) << ", "
+		  << "kKilled		  " << bool(hit->checkFlag(EcalRecHit::kKilled		 )) << ", "
+		  << "kTPSaturated	  " << bool(hit->checkFlag(EcalRecHit::kTPSaturated		 )) << ", "
+		  << "kL1SpikeFlag	  " << bool(hit->checkFlag(EcalRecHit::kL1SpikeFlag		 )) << ", "
+		  << "kWeird		  " << bool(hit->checkFlag(EcalRecHit::kWeird		 )) << ", "
+		  << "kDiWeird		  " << bool(hit->checkFlag(EcalRecHit::kDiWeird		 )) << ", "
+		  << "kHasSwitchToGain6	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 )) << ", "
+		  << "kHasSwitchToGain1	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 )) << ", "
+		  << "kUnknown              " << bool(hit->checkFlag(EcalRecHit::kUnknown) )               << std::endl;  
 	
-	std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << ", " 
-		  << "kPoorReco		  " << hit->checkFlag(EcalRecHit::kPoorReco)		  << ", "
-		  << "kOutOfTimE		  " << hit->checkFlag(EcalRecHit::kOutOfTime)		  << ", "
-		  << "kFaultyHardware	  " << hit->checkFlag(EcalRecHit::kFaultyHardware)	  << ", "
-		  << "kNoisy		  " << hit->checkFlag(EcalRecHit::kNoisy		 ) << ", "
-		<< "kPoorCalib		  " << hit->checkFlag(EcalRecHit::kPoorCalib		 ) << ", "
-		  << "kSaturated		  " << hit->checkFlag(EcalRecHit::kSaturated		 ) << ", "
-		  << "kLeadingEdgeRecovered " << hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  ) << ", "
-		  << "kNeighboursRecovered  " << hit->checkFlag(EcalRecHit::kNeighboursRecovered	 ) << ", "
-		  << "kTowerRecovered	  " << hit->checkFlag(EcalRecHit::kTowerRecovered	 ) << ", "
-		  << "kDead		  " << hit->checkFlag(EcalRecHit::kDead		  	 ) << ", "
-		  << "kKilled		  " << hit->checkFlag(EcalRecHit::kKilled		 ) << ", "
-		<< "kTPSaturated	  " << hit->checkFlag(EcalRecHit::kTPSaturated		 ) << ", "
-		  << "kL1SpikeFlag	  " << hit->checkFlag(EcalRecHit::kL1SpikeFlag		 ) << ", "
-		  << "kWeird		  " << hit->checkFlag(EcalRecHit::kWeird		 ) << ", "
-		  << "kDiWeird		  " << hit->checkFlag(EcalRecHit::kDiWeird		 ) << ", "
-		  << "kHasSwitchToGain6	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 ) << ", "
-		<< "kHasSwitchToGain1	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 ) << ", "
-		  << "kUnknown              " << hit->checkFlag(EcalRecHit::kUnknown)                << std::endl;  
-	
-	vkGood_.push_back(hit->checkFlag(EcalRecHit::kGood));
+	vkGood_.push_back(bool(hit->checkFlag(EcalRecHit::kGood)));
 	vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
 	vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
 	vkFaultyHardware_.push_back(hit->checkFlag(EcalRecHit::kFaultyHardware));
@@ -665,33 +666,35 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
 	EBDetId idCurrent= hitAndFr_v[ii].first ;
 	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
-	if ( hit->checkFlag(EcalRecHit::kNeighboursRecovered)) {
+	if (hit ==  rechit_EB_col->end()) continue;
+      
+	if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
 	  for (int i=0; i< 19 ; i++){
 	    std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
 	  }
 	  std::cout << std::endl;
+	  std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << std::endl;
+	  std::cout << "kGood " <<  bool(hit->checkFlag(EcalRecHit::kGood)) << ", " 
+		    << "kPoorReco		  " << bool(hit->checkFlag(EcalRecHit::kPoorReco))		  << ", "
+		    << "kOutOfTimE		  " <<bool( hit->checkFlag(EcalRecHit::kOutOfTime))		  << ", "
+		    << "kFaultyHardware	  " << bool(hit->checkFlag(EcalRecHit::kFaultyHardware))	  << ", "
+		    << "kNoisy		  " << bool(hit->checkFlag(EcalRecHit::kNoisy		 )) << ", "
+		    << "kPoorCalib		  " << bool(hit->checkFlag(EcalRecHit::kPoorCalib		 )) << ", "
+		    << "kSaturated		  " << bool(hit->checkFlag(EcalRecHit::kSaturated		 )) << ", "
+		    << "kLeadingEdgeRecovered " << bool(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  )) << ", "
+		    << "kNeighboursRecovered  " << bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered	 )) << ", "
+		    << "kTowerRecovered	  " << bool(hit->checkFlag(EcalRecHit::kTowerRecovered	 )) << ", "
+		    << "kDead		  " << bool(hit->checkFlag(EcalRecHit::kDead		  	 )) << ", "
+		    << "kKilled		  " << bool(hit->checkFlag(EcalRecHit::kKilled		 )) << ", "
+		    << "kTPSaturated	  " << bool(hit->checkFlag(EcalRecHit::kTPSaturated		 )) << ", "
+		    << "kL1SpikeFlag	  " << bool(hit->checkFlag(EcalRecHit::kL1SpikeFlag		 )) << ", "
+		    << "kWeird		  " << bool(hit->checkFlag(EcalRecHit::kWeird		 )) << ", "
+		    << "kDiWeird		  " << bool(hit->checkFlag(EcalRecHit::kDiWeird		 )) << ", "
+		    << "kHasSwitchToGain6	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 )) << ", "
+		    << "kHasSwitchToGain1	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 )) << ", "
+		    << "kUnknown              " << bool(hit->checkFlag(EcalRecHit::kUnknown) )               << std::endl;  
 	  
-	  std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << ", " 
-		    << "kPoorReco		  " << hit->checkFlag(EcalRecHit::kPoorReco)		  << ", "
-		    << "kOutOfTimE		  " << hit->checkFlag(EcalRecHit::kOutOfTime)		  << ", "
-		    << "kFaultyHardware	  " << hit->checkFlag(EcalRecHit::kFaultyHardware)	  << ", "
-		    << "kNoisy		  " << hit->checkFlag(EcalRecHit::kNoisy		 ) << ", "
-		    << "kPoorCalib		  " << hit->checkFlag(EcalRecHit::kPoorCalib		 ) << ", "
-		    << "kSaturated		  " << hit->checkFlag(EcalRecHit::kSaturated		 ) << ", "
-		    << "kLeadingEdgeRecovered " << hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  ) << ", "
-		    << "kNeighboursRecovered  " << hit->checkFlag(EcalRecHit::kNeighboursRecovered	 ) << ", "
-		    << "kTowerRecovered	  " << hit->checkFlag(EcalRecHit::kTowerRecovered	 ) << ", "
-		    << "kDead		  " << hit->checkFlag(EcalRecHit::kDead		  	 ) << ", "
-		    << "kKilled		  " << hit->checkFlag(EcalRecHit::kKilled		 ) << ", "
-		    << "kTPSaturated	  " << hit->checkFlag(EcalRecHit::kTPSaturated		 ) << ", "
-		    << "kL1SpikeFlag	  " << hit->checkFlag(EcalRecHit::kL1SpikeFlag		 ) << ", "
-		    << "kWeird		  " << hit->checkFlag(EcalRecHit::kWeird		 ) << ", "
-		    << "kDiWeird		  " << hit->checkFlag(EcalRecHit::kDiWeird		 ) << ", "
-		    << "kHasSwitchToGain6	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 ) << ", "
-		    << "kHasSwitchToGain1	  " << hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 ) << ", "
-		    << "kUnknown              " << hit->checkFlag(EcalRecHit::kUnknown)                << std::endl;  
-	  
-	  vkGood_.push_back(hit->checkFlag(EcalRecHit::kGood));
+	  vkGood_.push_back(bool(hit->checkFlag(EcalRecHit::kGood)));
 	  vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
 	  vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
 	  vkFaultyHardware_.push_back(hit->checkFlag(EcalRecHit::kFaultyHardware));
