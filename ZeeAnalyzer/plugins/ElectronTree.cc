@@ -747,7 +747,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	float neigh8=0.;
 	float sum8=0.;
 	
-	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	
 	for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
 	  std::cout << __LINE__ << " matrix size " << matrix.size() << std::endl; 
@@ -904,7 +904,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	  float neigh8=0.;
 	  float sum8=0.;
 	  
-	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	  
 	  for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
 	    std::cout << __LINE__ << " matrix size " << matrix.size() << std::endl; 

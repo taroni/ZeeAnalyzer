@@ -726,7 +726,7 @@ void MatrixInClusters::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     if (xtalInEle==true){
       for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
 	EBDetId idCurrent= hitAndFr_v[ii].first ;
-	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	int xtalAboveThr=0;
 	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
 	if (hit ==  rechit_EB_col->end()) continue;
@@ -760,7 +760,7 @@ void MatrixInClusters::analyze(const edm::Event& iEvent, const edm::EventSetup& 
        
 
       
-      matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+      matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 
 
       //std::cout << __LINE__ << endl ; 
@@ -784,7 +784,7 @@ void MatrixInClusters::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	float neigh8=0.;
 	float sum8=0.;
 	
-	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	
 	for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
 	  edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
@@ -913,7 +913,7 @@ void MatrixInClusters::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       if (xtalInEle==true){
 	for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
 	  EBDetId idCurrent= hitAndFr_v[ii].first ;
-	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	  edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
 	  if (hit ==  rechit_EB_col->end()) continue;
 
@@ -959,7 +959,7 @@ void MatrixInClusters::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	  float neigh8=0.;
 	  float sum8=0.;
 	  
-	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	  
 	  for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
 	    edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );

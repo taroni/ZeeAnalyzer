@@ -24,7 +24,7 @@ config.Data.publication = True
 #config.Data.outLFNDirBase='/store/group/dpg_ecal/comm_ecal/taroni/'
 
 # This string is used to construct the output dataset name
-config.Data.outputDatasetTag = 'ZEEDeadCh2018_pierreTag_20GeV_Cv3'
+config.Data.outputDatasetTag = 'ZEEDeadCh2018_pierreTag_20GeV_Cv3_test'
 
 # These values only make sense for processing data
 #    Select input data based on a lumi mask

@@ -22,7 +22,7 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(-1)
+    input = cms.untracked.int32(100)
 )
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 # Input source
@@ -33,9 +33,9 @@ process.source = cms.Source("PoolSource",
     secondaryFileNames = cms.untracked.vstring()
 )
 events= cms.untracked.VEventRange()
-for line in open('recoveredEvt2018Cv3.txt'):
-    events.append(line.rstrip("\n"))
-process.source.eventsToProcess = cms.untracked.VEventRange(events)
+#for line in open('recoveredEvt2018Cv3.txt'):
+#    events.append(line.rstrip("\n"))
+#process.source.eventsToProcess = cms.untracked.VEventRange(events)
 
 ##events= cms.untracked.VEventRange()
 ##for line in open('checkingIntEvt700.txt'):
@@ -43,7 +43,7 @@ process.source.eventsToProcess = cms.untracked.VEventRange(events)
 ##process.source.eventsToProcess = cms.untracked.VEventRange(events)
 # Other statements
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '101X_dataRun2_Prompt_v9', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '106X_dataRun2_PromptLike_v10', '')
 
 process.GlobalTag.toGet = cms.VPSet(
   cms.PSet(record = cms.string('EcalChannelStatusRcd'),

@@ -748,7 +748,7 @@ void ElectronTreeXtalList::analyze(const edm::Event& iEvent, const edm::EventSet
 	float neigh8=0.;
 	float sum8=0.;
 	
-	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	
 	for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
 	  edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
@@ -880,7 +880,7 @@ void ElectronTreeXtalList::analyze(const edm::Event& iEvent, const edm::EventSet
 	  float neigh8=0.;
 	  float sum8=0.;
 	  
-	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, 1 );
 	  
 	  for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
 	    edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
