@@ -1,13 +1,18 @@
 import ROOT
+import ast
 
-recovFile = ROOT.TFile.Open("electronTree_PierreTag_MCPU_0GeV_reweight.root", "READ")
-prodFile = ROOT.TFile.Open("electronTree_PierreTag_MCPU_0GeV_noRecov_reweight.root", "READ")
+isMC=False
+#recovFile = ROOT.TFile.Open("electronTree_PierreTag_MCPU_0GeV_reweight.root", "READ")
+#prodFile = ROOT.TFile.Open("electronTree_PierreTag_MCPU_0GeV_noRecov_reweight.root", "READ")
+#prodFile = ROOT.TFile.Open("electronTreeZEE_PierreTag_noChange.root", "READ")
+prodFile = ROOT.TFile.Open("electronTree_PierreTag_0_190412.root", "READ")
+recovFile = ROOT.TFile.Open("electronTreeZEE_PierreTag_sum8gt20_xtalInfo.root", "READ")
 
 rTree = recovFile.Get("ntupler/selected")
 pTree = prodFile.Get("ntupler/selected")
 
 
-outfile= ROOT.TFile.Open("outfileEleComparisonDY.root", "RECREATE")
+outfile= ROOT.TFile.Open("outfileEleComparison_data_sum8gt20GeV.root", "RECREATE")
 ##rTree.SetBranchAddress("runNumber", rRun)
 ##rTree.SetBranchAddress("lumiBlock", rLumi)
 ##rTree.SetBranchAddress("eventNumber", rEvt)
@@ -34,44 +39,47 @@ pe1Energy=ROOT.TH1F("pe1Energy", "pe1Energy", 40, 0, 200)
 re2Energy=ROOT.TH1F("re2Energy", "re2Energy", 40, 0, 200)
 pe2Energy=ROOT.TH1F("pe2Energy", "pe2Energy", 40, 0, 200)
 
-re1GenEnergy=ROOT.TH1F("re1GenEnergy", "re1GenEnergy", 40, 0, 200)
-pe1GenEnergy=ROOT.TH1F("pe1GenEnergy", "pe1GenEnergy", 40, 0, 200)
-re2GenEnergy=ROOT.TH1F("re2GenEnergy", "re2GenEnergy", 40, 0, 200)
-pe2GenEnergy=ROOT.TH1F("pe2GenEnergy", "pe2GenEnergy", 40, 0, 200)
-
-re1RawGenRatio=ROOT.TH1F("re1RawGenRatio", "re1RawGenRatio", 40, 0, 2)
-pe1RawGenRatio=ROOT.TH1F("pe1RawGenRatio", "pe1RawGenRatio", 40, 0, 2)
-re2RawGenRatio=ROOT.TH1F("re2RawGenRatio", "re2RawGenRatio", 40, 0, 2)
-pe2RawGenRatio=ROOT.TH1F("pe2RawGenRatio", "pe2RawGenRatio", 40, 0, 2)
-re1EnGenRatio=ROOT.TH1F("re1EnGenRatio", "re1EnGenRatio", 40, 0, 2)
-pe1EnGenRatio=ROOT.TH1F("pe1EnGenRatio", "pe1EnGenRatio", 40, 0, 2)
-re2EnGenRatio=ROOT.TH1F("re2EnGenRatio", "re2EnGenRatio", 40, 0, 2)
-pe2EnGenRatio=ROOT.TH1F("pe2EnGenRatio", "pe2EnGenRatio", 40, 0, 2)
-
-
 re1SigmaIetaIeta=ROOT.TH1F("re1SigmaIetaIeta","re1SigmaIetaIeta", 100, 0, 0.1)
 re2SigmaIetaIeta=ROOT.TH1F("re2SigmaIetaIeta","re2SigmaIetaIeta", 100, 0, 0.1)
 pe1SigmaIetaIeta=ROOT.TH1F("pe1SigmaIetaIeta","pe1SigmaIetaIeta", 100, 0, 0.1)
 pe2SigmaIetaIeta=ROOT.TH1F("pe2SigmaIetaIeta","pe2SigmaIetaIeta", 100, 0, 0.1)
 
+s = open('Cert_314472-325175_13TeV_PromptReco_Collisions18_JSON.txt', 'r').read()
+mydict=ast.literal_eval(s)
+
 count=0
 for row in rTree:
-    count+=1
-    if count % 1000 == 1 : print 'processing %sst electron' % str(count)
-    if row.e1Charge*row.e2Charge!=-1: continue
-    if (row.e1SeedIPhi==-599.) : continue
-    if (row.e2SeedIPhi==-599.) : continue
-    if (row.e1SeedIEta==-99.) : continue
-    if (row.e2SeedIEta==-99.) : continue
 
-    if (row.e1SigmaIetaIeta > 0.02) : continue
-    if (row.e2SigmaIetaIeta > 0.02): continue
+    if count%100==0: print 'the %ith entry has been analysed' %count
+    count+=1
+    if not isMC:
+        if not  str(row.runNumber) in mydict: continue
+        lumilist=mydict[str(row.runNumber)]
+        lumiCheck=False
+        for lumiInt in lumilist:
+            start, end = lumiInt
+            if row.lumiBlock in range (start, end+1):
+                lumiCheck=True
+                break
+        if lumiCheck==False: continue
+
+    if row.e1Charge*row.e2Charge!=-1: continue
+    if (row.e1SeedIPhi==-599. and row.e2SeedIPhi==-599.) : continue
+    if (row.e1SeedIEta==-99. and row.e2SeedIEta==-99.) : continue
+    ##if (row.e1SeedIPhi==-599.) : continue
+    ##if (row.e2SeedIPhi==-599.) : continue
+    ##if (row.e1SeedIEta==-99.) : continue
+    ##if (row.e2SeedIEta==-99.) : continue
 
     for entry in pTree:
-        if entry.e1Charge*entry.e2Charge!=-1 : continue
+
         if not row.runNumber==entry.runNumber: continue
         if not row.lumiBlock==entry.lumiBlock: continue
         if not row.eventNumber==entry.eventNumber: continue
+        if entry.e1Charge*entry.e2Charge!=-1 : continue
+        if (entry.e1SeedIPhi==-599. and entry.e2SeedIPhi==-599.) : continue
+        if (entry.e1SeedIEta==-99. and entry.e2SeedIEta==-99.) : continue
+
         if (entry.e1SeedIPhi==-599.) : continue
         if (entry.e2SeedIPhi==-599.) : continue
         if (entry.e1SeedIEta==-99.) : continue
@@ -85,49 +93,34 @@ for row in rTree:
 
             if not (row.e1IsRecovered or row.e2IsRecovered): continue 
             
-            #print row.runNumber, row.lumiBlock, row.eventNumber, entry.runNumber, entry.lumiBlock, entry.eventNumber, row.invMass, entry.invMass, row.e1Charge, row.e2Charge, entry.e1Charge, entry.e2Charge, row.e1PhiSC, entry.e1PhiSC, row.e2PhiSC, entry.e2PhiSC
 
             rInvMass.Fill(row.invMass)
             rInvMassRaw.Fill(row.invMass_rawSC)
             
             pInvMass.Fill(entry.invMass)
             pInvMassRaw.Fill(entry.invMass_rawSC)
- 
+            
             if (row.e1IsRecovered):
                 re1R9.Fill(row.e1R9)
                 re1RawEnergy.Fill(row.e1RawEnergy)
                 re1Energy.Fill(row.e1Energy)
-                re1GenEnergy.Fill(row.e1GenEnergy)
-                re1RawGenRatio.Fill(row.e1RawEnergy/row.e1GenEnergy)
-                re1EnGenRatio.Fill(row.e1Energy/row.e1GenEnergy)
                 re1SigmaIetaIeta.Fill(row.e1SigmaIetaIeta)
                 pe1R9.Fill(entry.e1R9)
                 pe1RawEnergy.Fill(entry.e1RawEnergy)
                 pe1Energy.Fill(entry.e1Energy)
-                pe1GenEnergy.Fill(entry.e1GenEnergy)
-                pe1RawGenRatio.Fill(entry.e1RawEnergy/entry.e1GenEnergy)
-                pe1EnGenRatio.Fill(entry.e1Energy/entry.e1GenEnergy)
                 pe1SigmaIetaIeta.Fill(entry.e1SigmaIetaIeta)
-
+            
             elif(row.e2IsRecovered):
                 re2R9.Fill(row.e2R9)
                 re2RawEnergy.Fill(row.e2RawEnergy)
                 re2Energy.Fill(row.e2Energy)
-                re2GenEnergy.Fill(row.e2GenEnergy)
-                re2RawGenRatio.Fill(row.e2RawEnergy/row.e2GenEnergy)
-                re2EnGenRatio.Fill(row.e2Energy/row.e2GenEnergy)
                 re2SigmaIetaIeta.Fill(row.e2SigmaIetaIeta)
                 pe2R9.Fill(entry.e2R9)
                 pe2RawEnergy.Fill(entry.e2RawEnergy)
                 pe2Energy.Fill(entry.e2Energy)
-                pe2GenEnergy.Fill(entry.e2GenEnergy)
-                pe2RawGenRatio.Fill(entry.e2RawEnergy/entry.e2GenEnergy)
-                pe2EnGenRatio.Fill(entry.e2Energy/entry.e2GenEnergy)
                 pe2SigmaIetaIeta.Fill(entry.e2SigmaIetaIeta)
-
-            break
                 
-            
+print 'all event processed'      
 outfile.cd()
 rInvMass.Write()
 pInvMass.Write()
@@ -153,19 +146,5 @@ re2SigmaIetaIeta.Write()
 pe1SigmaIetaIeta.Write()
 pe2SigmaIetaIeta.Write()
 
-pe2GenEnergy.Write()
-pe2RawGenRatio.Write()
-pe2EnGenRatio.Write()
-re2GenEnergy.Write()
-re2RawGenRatio.Write()
-re2EnGenRatio.Write()
-pe1GenEnergy.Write()
-pe1RawGenRatio.Write()
-pe1EnGenRatio.Write()
-re1GenEnergy.Write()
-re1RawGenRatio.Write()
-re1EnGenRatio.Write()
-
-
-print 'comparison ended'
 outfile.Close()
+print 'comparison completed'

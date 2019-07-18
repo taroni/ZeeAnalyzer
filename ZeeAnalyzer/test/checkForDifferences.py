@@ -12,10 +12,10 @@ parser.add_argument('--createHistograms', dest='histos', action='store', default
 args = parser.parse_args()
 createHistos=bool(args.histos)
 
-
-
-tree0 =uproot.open("electronTree_0GeV.root")['ntupler']['selected']
-tree15=uproot.open("electronTree_15GeV.root")['ntupler']['selected']
+tree0 =uproot.open("electronTree_PierreTag_MCPU_0GeV_reweight.root")['ntupler']['selected']
+tree_noCh=uproot.open("electronTree_PierreTag_MCPU_0GeV_noRecov_reweight.root")['ntupler']['selected']
+#tree0 =uproot.open("electronTreeZEE_PierreTag_sum8gt0_xtalInfo.root")['ntupler']['selected']
+#tree_noCh=uproot.open("electronTreeZEE_PierreTag_noChange.root")['ntupler']['selected']
 
 #outfile= ROOT.TFile.Open("outfileEleComparisonDY_0_15GeV.root", "RECREATE")
 
@@ -23,100 +23,38 @@ indata0=tree0.pandas.df(['runNumber', 'lumiBlock', 'eventNumber','e1Charge','e2C
 ])
 print list(indata0.columns.values), indata0.shape[0]
 
-indata15=tree15.pandas.df(['runNumber', 'lumiBlock', 'eventNumber', 'e1Charge', 'e2Charge', 'e1Eta', 'e1Phi', 'e1R9', 'e2Eta', 'e2Phi', 'e2R9', 'e1SeedIEta', 'e1SeedIPhi', 'e2SeedIEta', 'e2SeedIPhi', 'e1SigmaIetaIeta', 'e2SigmaIetaIeta', 'e1EtaSC', 'e2EtaSC', 'e1PhiSC', 'e2PhiSC', 'e1Energy', 'e1RawEnergy', 'e2Energy', 'e2RawEnergy', 'invMass', 'invMass_rawSC', 'e1GenEnergy', 'e2GenEnergy', 'e1IsDead', 'e1IsRecovered', 'e2IsDead', 'e2IsRecovered'
+indata_noCh=tree_noCh.pandas.df(['runNumber', 'lumiBlock', 'eventNumber', 'e1Charge', 'e2Charge', 'e1Eta', 'e1Phi', 'e1R9', 'e2Eta', 'e2Phi', 'e2R9', 'e1SeedIEta', 'e1SeedIPhi', 'e2SeedIEta', 'e2SeedIPhi', 'e1SigmaIetaIeta', 'e2SigmaIetaIeta', 'e1EtaSC', 'e2EtaSC', 'e1PhiSC', 'e2PhiSC', 'e1Energy', 'e1RawEnergy', 'e2Energy', 'e2RawEnergy', 'invMass', 'invMass_rawSC', 'e1GenEnergy', 'e2GenEnergy', 'e1IsDead', 'e1IsRecovered', 'e2IsDead', 'e2IsRecovered'
 ])
 
 
-indata15=indata15[indata15.e1Charge*indata15.e2Charge==-1]
+indata_noCh=indata_noCh[indata_noCh.e1Charge*indata_noCh.e2Charge==-1]
 indata0=indata0[indata0.e1Charge*indata0.e2Charge==-1]
 
-indata15=indata15[(indata15.invMass_rawSC>60)  &(indata15.invMass_rawSC<120)]
-indata0=indata0[(indata0.invMass_rawSC>60)  &(indata0.invMass_rawSC<120)]
+#indata_noCh=indata_noCh[(indata_noCh.invMass_rawSC>60)  &(indata_noCh.invMass_rawSC<120)]
+#indata0=indata0[(indata0.invMass_rawSC>60)  &(indata0.invMass_rawSC<120)]
 
-#indata15=indata15[indata15.e1SeedIEta!=-99]
-#indata15=indata15[indata15.e1SeedIPhi!=-599]
+#indata_noCh=indata_noCh[indata_noCh.e1SeedIEta!=-99]
+#indata_noCh=indata_noCh[indata_noCh.e1SeedIPhi!=-599]
 #indata0=indata0[indata0.e1SeedIEta!=-99]
 #indata0=indata0[indata0.e1SeedIPhi!=-599]
 
-indata15=indata15[(indata15.e1IsRecovered==1) | (indata15.e2IsRecovered==1)]
-indata0=indata0[(indata0.e1IsRecovered==1) | (indata0.e2IsRecovered==1)]
+#indata_noCh=indata_noCh[(indata_noCh.e1IsRecovered==1) | (indata_noCh.e2IsRecovered==1)]
+#indata0=indata0[(indata0.e1IsRecovered==1) | (indata0.e2IsRecovered==1)]
 print list(indata0.columns.values), indata0.shape[0]
-print list(indata15.columns.values), indata15.shape[0]
+print list(indata_noCh.columns.values), indata_noCh.shape[0]
 
 evtlist0 = set(["%i:%i:%i" %(indata0.iloc[x,:].runNumber, indata0.iloc[x,:].lumiBlock, indata0.iloc[x,:].eventNumber) for x in range(0, len(indata0))])
-evtlist = set(["%i:%i:%i" %(indata15.iloc[x,:].runNumber, indata15.iloc[x,:].lumiBlock, indata15.iloc[x,:].eventNumber) for x in range(0, len(indata15))])
+evtlist = set(["%i:%i:%i" %(indata_noCh.iloc[x,:].runNumber, indata_noCh.iloc[x,:].lumiBlock, indata_noCh.iloc[x,:].eventNumber) for x in range(0, len(indata_noCh))])
 print len(evtlist0), len(evtlist)
 
-#df=pd.merge(indata15, indata0, how='inner',on=["runNumber", "lumiBlock", "eventNumber", 'e1Charge', 'e2Charge',  'e1SeedIEta', 'e1SeedIPhi', 'e2SeedIEta', 'e2SeedIPhi','e1GenEnergy', 'e2GenEnergy', 'e1IsRecovered', 'e2IsRecovered'])#, indicator=True) 
-
+#df=pd.merge(indata_noCh, indata0, how='inner',on=["runNumber", "lumiBlock", "eventNumber", 'e1Charge', 'e2Charge',  'e1SeedIEta', 'e1SeedIPhi', 'e2SeedIEta', 'e2SeedIPhi','e1GenEnergy', 'e2GenEnergy', 'e1IsRecovered', 'e2IsRecovered'])#, indicator=True) 
+#print indata_noCh.head()
+print indata0.head(20)
 #removing gen energies when using real data
-df=pd.merge(indata15, indata0, how='inner',on=["runNumber", "lumiBlock", "eventNumber", 'e1Charge', 'e2Charge',  'e1SeedIEta', 'e1SeedIPhi', 'e2SeedIEta', 'e2SeedIPhi', 'e1IsRecovered', 'e2IsRecovered'], indicator=True) 
-
-dfOnlyOne=pd.merge(indata15, indata0, how='outer',on=["runNumber", "lumiBlock", "eventNumber",], indicator=True)# 'e1Charge', 'e2Charge',  'e1SeedIEta', 'e1SeedIPhi', 'e2SeedIEta', 'e2SeedIPhi', 'e1IsRecovered', 'e2IsRecovered'], indicator=True) 
-
-#keep only events in indata0
-df0=dfOnlyOne[dfOnlyOne._merge=='right_only']
-df0=df0.drop(columns=[x for x in df0.columns.values if '_x' in x])
-df0=df0.drop(columns=['_merge'])
-df0=df0.rename(columns=dict(zip(df0.columns, df0.columns.str.replace("_y", ""))))
-df0=df0.drop(columns=['e1IsDead', 'e2IsDead','e2GenEnergy', 'e1GenEnergy'])
-#keep only events in indata15
-df15=dfOnlyOne[dfOnlyOne._merge=='left_only']
-df15=df15.drop(columns=[x for x in df15.columns.values if '_y' in x])
-df15=df15.drop(columns=['_merge'])
-df15=df15.rename(columns=dict(zip(df15.columns.values, [x.replace("_x", "") for x in df15.columns.values])))
-df15=df15.drop(columns=['e1IsDead', 'e2IsDead','e2GenEnergy', 'e1GenEnergy'])
-#print df0
-#print df15
-
-#df0=df0[  (df0.e1IsRecovered==1 & df0.e1Eta!=-99 & df0.e1Phi!=-599) | (df0.e2IsRecovered==1 & df0.e2Eta!=-99 & df0.e2Phi!=-599)]
-df0=df0[( (df0.e1IsRecovered==1) & (df0.e1SeedIEta!=-99) & (df0.e1SeedIPhi!=-599)) |  ((df0.e2IsRecovered==True) & (df0.e2SeedIEta!=-99) & (df0.e2SeedIPhi!=-599))]
-df15=df15[ ( (df15.e1IsRecovered==1) & (df15.e1SeedIEta!=-99) & (df15.e1SeedIPhi!=-599)) | ((df15.e2IsRecovered==1) & (df15.e2SeedIEta!=-99) &( df15.e2SeedIPhi!=-599))]
+df=pd.merge(indata_noCh, indata0, how='inner',on=["runNumber", "lumiBlock", "eventNumber"], indicator=True) 
 
 
-#print df0.columns.values, df0.shape[0]
-#print df15.columns.values, df15.shape[0]
-
-df0['commonEvt']=0
-df15['commonEvt']=0
-
-##print df15
-
-dfRecoveryCheck=pd.merge(df15, df0, how='outer', on=["runNumber", "lumiBlock", "eventNumber"], indicator=True)
-dfRecoveryCheck=dfRecoveryCheck[dfRecoveryCheck._merge!='both']
-print len(dfRecoveryCheck)
-
-
-
-for x in df0.index:
-    for y in df15.index:
-        #if ((df0.loc[x,'runNumber'], df0.loc[x,'lumiBlock'])==(df15.loc[y,'runNumber'], df15.loc[y,'lumiBlock'])):
-         #   for label in df0.columns.values:
-         #       print label, df0.loc[x,label], df15.loc[y,label]
-        if (df0.loc[x,'runNumber'], df0.loc[x,'lumiBlock'], df0.loc[x,'eventNumber']) !=  (df15.loc[y,'runNumber'], df15.loc[y,'lumiBlock'], df15.loc[y,'eventNumber']): continue
-
-        ##print x, y
-        ##if df15.loc[y,'commonEvt']==True: continue
-        if (abs(df0.loc[x,'e1SeedIEta']-df15.loc[y,'e1SeedIEta'])<=1 and  abs(df0.loc[x,'e2SeedIEta']-df15.loc[y,'e2SeedIEta'])<=1 and 
-                abs(df0.loc[x,'e1SeedIPhi']-df15.loc[y,'e1SeedIPhi'])<=1 and  abs(df0.loc[x,'e2SeedIPhi']-df15.loc[y,'e2SeedIPhi'])<=1) :
-            df0.loc[x,'commonEvt']=1
-            df15.loc[y,'commonEvt']=1
-            #for label in df0.columns.values:
-            #    print '%s : %s, %s' %(label, str(df0.loc[x,label]), str(df15.loc[y,label])),
-            #print '\n'
-
-
-
-#print df0           
-df0=df0[df0.commonEvt==0]
-df15=df15[df15.commonEvt==0]
-print df0.columns.values,  df0.shape[0]
-print df15.columns.values, df15.shape[0]
-
-print df15
-print df0
-
-#df=df[(abs(df.e1PhiSC_x-df.e1PhiSC_y)<0.1) & (abs(df.e2PhiSC_x-df.e2PhiSC_y)<0.1) & (abs(df.e1EtaSC_x-df.e1EtaSC_y)<0.1) & (abs(df.e2EtaSC_x-df.e2EtaSC_y)<0.1)]
+#df=df[(abs(df.e1PhiSC_x-df.e1PhiSC_y)<0.5) & (abs(df.e2PhiSC_x-df.e2PhiSC_y)<0.5) & (abs(df.e1EtaSC_x-df.e1EtaSC_y)<0.5) & (abs(df.e2EtaSC_x-df.e2EtaSC_y)<0.5)]
 #print df
 
 diffE1 = df.e1Energy_x-df.e1Energy_y
@@ -137,7 +75,7 @@ diffDf['diffRawMass']=diffRawMass
 #diffDf=diffDf.round(3)
 
 #diffDf=diffDf[(abs(diffDf.e1RawEnergyDiff)>0.1) | (abs(diffDf.e2RawEnergyDiff)>0.1) | (abs(diffDf.diffRawMass)>0.1)]
-#diffDf=diffDf[diffDf.eventNumber==9969601]
+diffDf=diffDf[diffDf.eventNumber==184638164]
 
 #diffDf=diffDf.drop(columns=['e1Charge', 'e2Charge', 'e1IsDead_x', 'e1IsDead_y', 'e2IsDead_x', 'e2IsDead_y'])
 
@@ -146,14 +84,17 @@ diffDf['diffRawMass']=diffRawMass
 
 print list(diffDf.columns.values),  diffDf.shape[0]
 
-#print diffDf[['runNumber', 'lumiBlock', 'eventNumber',#'e1Eta_x', 'e1Eta_y',  'e1Phi_x', 'e1Phi_y',  'e2Eta_x', 'e2Eta_y',  'e2Phi_x', 'e2Phi_y', 
+#tmpDiffDf=diffDf[diffDf.diffRawMass!=0]
+tmpDiffDf=diffDf
+print tmpDiffDf[['runNumber', 'lumiBlock', 'eventNumber',#'e1Eta_x', 'e1Eta_y',  'e1Phi_x', 'e1Phi_y',  'e2Eta_x', 'e2Eta_y',  'e2Phi_x', 'e2Phi_y', 
 #'e1EtaSC_x', 'e1EtaSC_y','e2EtaSC_x', 'e2EtaSC_y', 'e1PhiSC_x', 'e1PhiSC_y','e2PhiSC_x', 'e2PhiSC_y',# 'e1Energy_x', 
-#'e1RawEnergy_x', #'e2Energy_x', 
-#'e2RawEnergy_x', #'invMass_x', 
-#'invMass_rawSC_x', 
-#   'e1RawEnergy_y', 'e2RawEnergy_y',# 'invMass_y', 
-#'invMass_rawSC_y',# 'e1EnergyDiff', 'e2EnergyDiff',
-# 'e1RawEnergyDiff', 'e2RawEnergyDiff', 'diffRawMass']]#[["runNumber", "lumiBlock", "eventNumber", 'e1RawEnergyDiff', 'e2RawEnergyDiff', 'diffRawMass']]
+'e1RawEnergy_x', #'e2Energy_x', 
+'e2RawEnergy_x', #'invMass_x', 
+#                  'invMass_rawSC_x', 
+   'e1RawEnergy_y', 'e2RawEnergy_y',# 'invMass_y', 
+#                  'invMass_rawSC_y',# 'e1EnergyDiff', 'e2EnergyDiff',
+#'e1IsRecovered', 'e2IsRecovered',
+                  'e1RawEnergyDiff', 'e2RawEnergyDiff', 'diffRawMass']]#[["runNumber", "lumiBlock", "eventNumber", 'e1RawEnergyDiff', 'e2RawEnergyDiff', 'diffRawMass']]
 
 #outfile=open("eventsToCheck.txt", "w")
 #for x in range(0,len(diffDf)):
@@ -307,26 +248,26 @@ if createHistos:
             ##p_all_e2EnGenRatio.Fill(indata0.iloc[x,:].e2Energy/indata0.iloc[x,:].e2GenEnergy)
             p_all_e2SigmaIetaIeta.Fill(indata0.iloc[x,:].e2SigmaIetaIeta)
 
-    for x in range(0,len(indata15)):
-        r_all_InvMass.Fill(indata15.iloc[x,:].invMass)
-        r_all_InvMassRaw.Fill(indata15.iloc[x,:].invMass_rawSC)
-        if (indata15.iloc[x,:].e1IsRecovered):
-            r_all_e1R9.Fill(indata15.iloc[x,:].e1R9)
-            r_all_e1RawEnergy.Fill(indata15.iloc[x,:].e1RawEnergy)
-            r_all_e1Energy.Fill(indata15.iloc[x,:].e1Energy)
-            ##r_all_e1GenEnergy.Fill(indata15.iloc[x,:].e1GenEnergy)
-            ##r_all_e1RawGenRatio.Fill(indata15.iloc[x,:].e1RawEnergy/indata15.iloc[x,:].e1GenEnergy)
-            ##r_all_e1EnGenRatio.Fill(indata15.iloc[x,:].e1Energy/indata15.iloc[x,:].e1GenEnergy)
-            r_all_e1SigmaIetaIeta.Fill(indata15.iloc[x,:].e1SigmaIetaIeta)
+    for x in range(0,len(indata_noCh)):
+        r_all_InvMass.Fill(indata_noCh.iloc[x,:].invMass)
+        r_all_InvMassRaw.Fill(indata_noCh.iloc[x,:].invMass_rawSC)
+        if (indata_noCh.iloc[x,:].e1IsRecovered):
+            r_all_e1R9.Fill(indata_noCh.iloc[x,:].e1R9)
+            r_all_e1RawEnergy.Fill(indata_noCh.iloc[x,:].e1RawEnergy)
+            r_all_e1Energy.Fill(indata_noCh.iloc[x,:].e1Energy)
+            ##r_all_e1GenEnergy.Fill(indata_noCh.iloc[x,:].e1GenEnergy)
+            ##r_all_e1RawGenRatio.Fill(indata_noCh.iloc[x,:].e1RawEnergy/indata_noCh.iloc[x,:].e1GenEnergy)
+            ##r_all_e1EnGenRatio.Fill(indata_noCh.iloc[x,:].e1Energy/indata_noCh.iloc[x,:].e1GenEnergy)
+            r_all_e1SigmaIetaIeta.Fill(indata_noCh.iloc[x,:].e1SigmaIetaIeta)
 
-        elif(indata15.iloc[x,:].e2IsRecovered):
-            r_all_e2R9.Fill(indata15.iloc[x,:].e2R9)
-            r_all_e2RawEnergy.Fill(indata15.iloc[x,:].e2RawEnergy)
-            r_all_e2Energy.Fill(indata15.iloc[x,:].e2Energy)
-            ##r_all_e2GenEnergy.Fill(indata15.iloc[x,:].e2GenEnergy)
-            ##r_all_e2RawGenRatio.Fill(indata15.iloc[x,:].e2RawEnergy/indata15.iloc[x,:].e2GenEnergy)
-            ##r_all_e2EnGenRatio.Fill(indata15.iloc[x,:].e2Energy/indata15.iloc[x,:].e2GenEnergy)
-            r_all_e2SigmaIetaIeta.Fill(indata15.iloc[x,:].e2SigmaIetaIeta)
+        elif(indata_noCh.iloc[x,:].e2IsRecovered):
+            r_all_e2R9.Fill(indata_noCh.iloc[x,:].e2R9)
+            r_all_e2RawEnergy.Fill(indata_noCh.iloc[x,:].e2RawEnergy)
+            r_all_e2Energy.Fill(indata_noCh.iloc[x,:].e2Energy)
+            ##r_all_e2GenEnergy.Fill(indata_noCh.iloc[x,:].e2GenEnergy)
+            ##r_all_e2RawGenRatio.Fill(indata_noCh.iloc[x,:].e2RawEnergy/indata_noCh.iloc[x,:].e2GenEnergy)
+            ##r_all_e2EnGenRatio.Fill(indata_noCh.iloc[x,:].e2Energy/indata_noCh.iloc[x,:].e2GenEnergy)
+            r_all_e2SigmaIetaIeta.Fill(indata_noCh.iloc[x,:].e2SigmaIetaIeta)
             
 
     

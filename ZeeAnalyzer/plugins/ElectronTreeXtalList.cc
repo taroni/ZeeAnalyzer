@@ -1,6 +1,10 @@
 // system include files
 #include <memory>
 #include <vector>
+#include <fstream>
+#include <map>
+#include <iostream>
+#include <string>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -60,10 +64,10 @@
 #define initInt       {0,0,0}
 #define initIntCharge {-100,-100,-100}
 
-class ElectronTree : public edm::EDAnalyzer {
+class ElectronTreeXtalList : public edm::EDAnalyzer {
 public:
-  explicit ElectronTree(const edm::ParameterSet&);
-  ~ElectronTree();
+  explicit ElectronTreeXtalList(const edm::ParameterSet&);
+  ~ElectronTreeXtalList();
   
   enum ElectronMatchType {UNMATCHED = 0, 
 			  TRUE_PROMPT_ELECTRON, 
@@ -91,6 +95,8 @@ private:
 
   // ----------member data ---------------------------
   // edm::LumiReWeighting LumiWeights_;  
+
+  std::map<std::string, std::vector<long int> > xtalMap;
 
   bool isRecovered2;
   bool isDead2;
@@ -210,9 +216,11 @@ private:
   TH1F * h_Flags, *h_FlagsGood; 
 
   TH1F *h_ZeeMass, *h_ZMassRawEn,*hAll_ZeeMass, *hAll_ZMassRawEn, *hRecovered_ZeeMass, *hRecoverd_ZMassRawEn, *hEventCount; 
+
+
 };
 
-ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
+ElectronTreeXtalList::ElectronTreeXtalList(const edm::ParameterSet& iConfig) {
 
   isMC=iConfig.getParameter<bool>("isMC");
 
@@ -335,7 +343,7 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   tree->Branch("xtalRawId",&vRawId );  
   tree->Branch("xtalEn",&vXtalEn);
   tree->Branch("vEnFr", &vEnFr); 
-  
+
 
   tree->Branch("vSum8"     , &vSum8);	 
   tree->Branch("vAve"	    , &vAve);	 
@@ -434,16 +442,18 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
 
 
   typedef reco::Candidate::LorentzVector LorentzVector;
-
+  
   // LumiWeights_ = edm::LumiReWeighting("/afs/cern.ch/work/t/taroni/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/puMC_JuneProjectionFull18_PoissonOOTPU.root",
   //                                     "/afs/cern.ch/work/t/taroni/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/MyDataPileupHistogram.root",
   //                                     "puMC",
   //                                     "pileup");
+
+
 }
 
 
-ElectronTree::~ElectronTree() { }
-const float ElectronTree::getEffectiveArea(float eta) const{
+ElectronTreeXtalList::~ElectronTreeXtalList() { }
+const float ElectronTreeXtalList::getEffectiveArea(float eta) const{
   std::vector<double> absEtaMin_={ 0.0000, 1.0000, 1.4790, 2.0000, 2.2000, 2.3000, 2.4000};
   std::vector<double> absEtaMax_={ 1.0000,  1.4790, 2.0000,  2.2000, 2.3000, 2.4000, 5.0000};
   std::vector<double> effectiveAreaValues_={ 0.1703, 0.1715, 0.1213, 0.1230, 0.1635, 0.1937, 0.2393};
@@ -462,7 +472,7 @@ const float ElectronTree::getEffectiveArea(float eta) const{
   return effArea;
 }
 
-void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void ElectronTreeXtalList::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   using namespace std;
   using namespace edm;
@@ -549,7 +559,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   }
   MyWeight=1;
   // if (isMC==true) MyWeight = LumiWeights_.weight( nTruePU );
-  //std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ <<  " " << MyWeight << std::endl;
+  std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ <<  " " << MyWeight << std::endl;
 
   // edm::ESHandle<EcalChannelStatus> chStatus;
   // iSetup.get<EcalChannelStatusRcd>().get(chStatus);
@@ -627,7 +637,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     vIc_.clear();
     vRawId_.clear();
     vXtalEn_.clear();
-    vEnFr_.clear(); 
+    vEnFr_.clear();
     vkGood_.clear();
     vkPoorReco_.clear();
     vkOutOfTimE_.clear();
@@ -661,7 +671,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     vAve_.clear();
     std::vector<DetId> matrix;
 
-    //std::cout << __LINE__<< " vXtalEn_, first ele iterator " << vXtalEn_.size() << std::endl;
+    std::cout << __LINE__<< " vXtalEn_, first ele iterator " << vXtalEn_.size() << std::endl;
     isRecovered=false;
     isDead = false;
 
@@ -716,27 +726,18 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       float enFr = hitAndFr_v[ii].second ;
       edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
       if (hit ==  rechit_EB_col->end()) continue;
-      // for (size_t ic=0; ic<vIc1.size(); ic++){
-      // 	std::cout << __LINE__ << " " << vIc1[ic] << " "<< idCurrent << std::endl;
-      // 	if (vIc1[ic]==idCurrent) std::cout << "Crystal already found in the supercluster " << idCurrent << std::endl;
-      // }
-      // vIc.push_back(idCurrent);
+      
+      //std::cout << __LINE__ << endl ; 
+      //if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
+      std::string myXtalString = std::to_string(runNumber)+":"+std::to_string(lumiBlock)+":"+std::to_string(eventNumber);
+      map<std::string, std::vector<long int> >::iterator xtalIt = xtalMap.find(myXtalString);
+      if (xtalIt==xtalMap.end()) continue; 
+      std::vector<long int>::iterator itRawId;
+      itRawId = find (xtalIt->second.begin(), xtalIt->second.end(),idCurrent.rawId());
+      if (itRawId!=xtalIt->second.end()){
+	//std::cout << __LINE__ <<  "xtal found "<< std::endl;
 
 
-      if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
-	std::cout << __LINE__ << " " << ii << " " << idCurrent << " " << hit->energy()  << " " << it->energy()<< " " << it->superCluster()->rawEnergy() << " " << hitAndFr_v.size() << " " << idCurrent.rawId()<< std::endl;
-	// for (int i=0; i< 19 ; i++){
-	//   std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
-	//   if (hit->checkFlag(i)==1) h_Flags -> Fill(i);
-	//   if (i!=0 && hit->checkFlag(0)==1 && hit->checkFlag(i)==1) h_FlagsGood -> Fill(i);
-
-	// }
-	// std::cout << std::endl;
-	// std::cout << __LINE__ << " " << ii << " " << idCurrent << " " << hit->energy()  << " " << it->energy()<< " " << it->superCluster()->rawEnergy() << " " << hitAndFr_v.size() << " " << idCurrent.rawId()<< " "<<  hitAndFr_v[ii].second <<std::endl;
-
-	// std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << std::endl;
-	// std::cout << "kGood " <<  bool(hit->checkFlag(EcalRecHit::kGood)) << ", " << "kPoorReco		  " << bool(hit->checkFlag(EcalRecHit::kPoorReco))		  << ", "<< "kOutOfTimE		  " <<bool( hit->checkFlag(EcalRecHit::kOutOfTime))		  << ", "  << "kFaultyHardware	  " << bool(hit->checkFlag(EcalRecHit::kFaultyHardware))	  << ", "  << "kNoisy		  " << bool(hit->checkFlag(EcalRecHit::kNoisy		 )) << ", " << "kPoorCalib		  " << bool(hit->checkFlag(EcalRecHit::kPoorCalib		 )) << ", "  << "kSaturated		  " << bool(hit->checkFlag(EcalRecHit::kSaturated		 )) << ", " << "kLeadingEdgeRecovered " << bool(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  )) << ", " << "kNeighboursRecovered  " << bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered	 )) << ", " << "kTowerRecovered	  " << bool(hit->checkFlag(EcalRecHit::kTowerRecovered	 )) << ", " << "kDead		  " << bool(hit->checkFlag(EcalRecHit::kDead		  	 )) << ", "<< "kKilled		  " << bool(hit->checkFlag(EcalRecHit::kKilled		 )) << ", " << "kTPSaturated	  " << bool(hit->checkFlag(EcalRecHit::kTPSaturated		 )) << ", " << "kL1SpikeFlag	  " << bool(hit->checkFlag(EcalRecHit::kL1SpikeFlag		 )) << ", "  << "kWeird		  " << bool(hit->checkFlag(EcalRecHit::kWeird		 )) << ", " << "kDiWeird		  " << bool(hit->checkFlag(EcalRecHit::kDiWeird		 )) << ", " << "kHasSwitchToGain6	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 )) << ", " << "kHasSwitchToGain1	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 )) << ", " << "kUnknown              " << bool(hit->checkFlag(EcalRecHit::kUnknown) )               << std::endl;  
-	
 	float neigh0=0.;
 	float neigh1=0.;
 	float neigh2=0.;
@@ -750,14 +751,13 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
 	
 	for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
-	  std::cout << __LINE__ << " matrix size " << matrix.size() << std::endl; 
 	  edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
 	  if (hitNeigh ==  rechit_EB_col->end()) continue;
 	  if (hitNeigh == hit) continue;
 	  
 	  if (hitNeigh->checkFlag(EcalRecHit::kL1SpikeFlag)==true) std::cout<< "SPIKE!" << std::endl;
 	  if (hitNeigh->checkFlag(EcalRecHit::kSaturated)==true)continue;
-	  std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
+	  //std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
 	  sum8+=hitNeigh->energy();
 	  if (iM==0)  neigh0=hitNeigh->energy();
 	  if (iM==1)  neigh1=hitNeigh->energy();
@@ -779,7 +779,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	vNeigh6_.push_back(neigh6);
 	vNeigh7_.push_back(neigh7);
 	vNeigh8_.push_back(neigh8);
-	std::cout << "is e1 good?" << bool(hit->checkFlag(EcalRecHit::kGood))<< " " << idCurrent << " " << enFr<< std::endl;
+	
 	vkGood_.push_back(bool(hit->checkFlag(EcalRecHit::kGood)));
 	vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
 	vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
@@ -860,39 +860,15 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	float enFr = hitAndFr_v[ii].second;
 	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
 	if (hit ==  rechit_EB_col->end()) continue;
-	// for (size_t ic=0; ic<vIc2.size(); ic++){
-	//   if (vIc2[ic]==idCurrent) std::cout << "Crystal already found in the supercluster "<< idCurrent << std::endl;
-	// }
-	// vIc2.push_back(idCurrent);
-	
-	if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
-	  std::cout << __LINE__ << " " << ii << " " << idCurrent << " " << hit->energy() << " " << jt->energy() << " " << jt->superCluster()->rawEnergy() << " " <<  hitAndFr_v.size() << " " << idCurrent.rawId()<< std::endl;
-	
-	  //   for (int i=0; i< 19 ; i++){
-	//     std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
-	//   }
-	   // std::cout << std::endl;
-	   // std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << std::endl;
-	   // std::cout << "kGood " <<  bool(hit->checkFlag(EcalRecHit::kGood)) << ", " 
-	   // 	    << "kPoorReco		  " << bool(hit->checkFlag(EcalRecHit::kPoorReco))		  << ", "
-	   // 	    << "kOutOfTimE		  " <<bool( hit->checkFlag(EcalRecHit::kOutOfTime))		  << ", "
-	   // 	    << "kFaultyHardware	  " << bool(hit->checkFlag(EcalRecHit::kFaultyHardware))	  << ", "
-	   // 	    << "kNoisy		  " << bool(hit->checkFlag(EcalRecHit::kNoisy		 )) << ", "
-	   // 	    << "kPoorCalib		  " << bool(hit->checkFlag(EcalRecHit::kPoorCalib		 )) << ", "
-	   // 	    << "kSaturated		  " << bool(hit->checkFlag(EcalRecHit::kSaturated		 )) << ", "
-	   // 	    << "kLeadingEdgeRecovered " << bool(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  )) << ", "
-	   // 	    << "kNeighboursRecovered  " << bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered	 )) << ", "
-	   // 	    << "kTowerRecovered	  " << bool(hit->checkFlag(EcalRecHit::kTowerRecovered	 )) << ", "
-	   // 	    << "kDead		  " << bool(hit->checkFlag(EcalRecHit::kDead		  	 )) << ", "
-	   // 	    << "kKilled		  " << bool(hit->checkFlag(EcalRecHit::kKilled		 )) << ", "
-	   // 	    << "kTPSaturated	  " << bool(hit->checkFlag(EcalRecHit::kTPSaturated		 )) << ", "
-	   // 	    << "kL1SpikeFlag	  " << bool(hit->checkFlag(EcalRecHit::kL1SpikeFlag		 )) << ", "
-	   // 	    << "kWeird		  " << bool(hit->checkFlag(EcalRecHit::kWeird		 )) << ", "
-	   // 	    << "kDiWeird		  " << bool(hit->checkFlag(EcalRecHit::kDiWeird		 )) << ", "
-	   // 	    << "kHasSwitchToGain6	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 )) << ", "
-	   // 	    << "kHasSwitchToGain1	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 )) << ", "
-	   // 	    << "kUnknown              " << bool(hit->checkFlag(EcalRecHit::kUnknown) )               << std::endl;  
 
+	std::string myXtalString = std::to_string(runNumber)+":"+std::to_string(lumiBlock)+":"+std::to_string(eventNumber);
+	map<std::string, std::vector<long int> >::iterator xtalIt = xtalMap.find(myXtalString);
+	//std::cout << __LINE__ << " map size " << xtalMap.size() << std::endl ; 
+	if (xtalIt==xtalMap.end()) continue; 
+	std::vector<long int>::iterator itRawId;
+	itRawId = find (xtalIt->second.begin(), xtalIt->second.end(),idCurrent.rawId());
+	if (itRawId!=xtalIt->second.end()){
+	  //std::cout << __LINE__ <<  " xtal found "<< std::endl;
 
 	  float neigh0=0.;
 	  float neigh1=0.;
@@ -907,8 +883,6 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
 	  
 	  for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
-	    std::cout << __LINE__ << " matrix size " << matrix.size() << std::endl; 
-	  
 	    edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
 	    if (hitNeigh ==  rechit_EB_col->end()) continue;
 	    if (hitNeigh == hit) continue;
@@ -916,7 +890,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	    if (hitNeigh->checkFlag(EcalRecHit::kL1SpikeFlag)==true) std::cout<< "SPIKE!" << std::endl;
 	    if (hitNeigh->checkFlag(EcalRecHit::kSaturated)==true)continue;
 	    sum8+=hitNeigh->energy();
-	    std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
+	    //std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
 	   
 	    if (iM==0)  neigh0=hitNeigh->energy();
 	    if (iM==1)  neigh1=hitNeigh->energy();
@@ -938,7 +912,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	  vNeigh6_.push_back(neigh6);
 	  vNeigh7_.push_back(neigh7);
 	  vNeigh8_.push_back(neigh8);
-	  std::cout << "is e2 good?" << bool(hit->checkFlag(EcalRecHit::kGood))<< " " << idCurrent<< " " << enFr << std::endl;
+
 	  vkGood_.push_back(bool(hit->checkFlag(EcalRecHit::kGood)));
 	  vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
 	  vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
@@ -995,7 +969,6 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       	  h_ZeeMass->Fill( zp4.M(),MyWeight);
        	  h_ZMassRawEn->Fill(invMass_rawSC,MyWeight);
 	}
-	std::cout << " is e1 recovered? "<< isRecovered << ", is e2 recovered? " << isRecovered2 << std::endl; 
 	std::cout << "raw Mass " << invMass_rawSC << " e1 raw En " <<  it->superCluster()->rawEnergy() << " " << jt->superCluster()->rawEnergy() << std::endl;
  	mcGenWeight=-1.;
        	e1Charge=(int)it->charge();
@@ -1018,14 +991,14 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	//if (it->superCluster()->caloID().detector(reco::CaloID::DET_ECAL_BARREL)==true){
 	if(it->superCluster()->seed()->seed().subdetId()==EcalBarrel){
 	  EBDetId e1SeedDetId(it->superCluster()->seed()->seed());
-	  std::cout << "Seed e1" <<  e1SeedDetId << " "<< e1SeedDetId.ieta()<< " " << e1SeedDetId.iphi()<< std::endl;
+	  std::cout << "Seed " <<  e1SeedDetId << " "<< e1SeedDetId.ieta()<< " " << e1SeedDetId.iphi()<< std::endl;
 	  e1SeedIEta=(float)e1SeedDetId.ieta();
 	  e1SeedIPhi=(float)e1SeedDetId.iphi();
 	}
 	//if (jt->superCluster()->caloID().detector(reco::CaloID::DET_ECAL_BARREL)==true){
 	if(jt->superCluster()->seed()->seed().subdetId()==EcalBarrel){
 	  EBDetId e2SeedDetId(jt->superCluster()->seed()->seed());
-	  std::cout << "Seed e2 " <<  e2SeedDetId << " "<< e2SeedDetId.ieta()<< " " << e2SeedDetId.iphi()<< std::endl;
+	  std::cout << "Seed " <<  e2SeedDetId << " "<< e2SeedDetId.ieta()<< " " << e2SeedDetId.iphi()<< std::endl;
 	  e2SeedIEta=(float)e2SeedDetId.ieta();
 	  e2SeedIPhi=(float)e2SeedDetId.iphi();
 	}
@@ -1087,6 +1060,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	vRawId=vRawId_;
 	vXtalEn=vXtalEn_;
 	vEnFr=vEnFr_;
+
 	
 	vNeigh0=vNeigh0_;
 	vNeigh1=vNeigh1_;
@@ -1228,11 +1202,33 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 }
 
 
-void ElectronTree::beginJob() { }
+void ElectronTreeXtalList::beginJob() { 
+  std::string intXtal; 
+  std::ifstream infile("xtals_ZeePierreTag_sum8gt20.txt");
+  std::cout << __LINE__ << " file open? " <<infile.is_open()<< std::endl; 
+  if (infile.is_open()){
+    int lineCount=0;
+    while(getline(infile, intXtal)){
+      lineCount++;
+      if (lineCount<11)std::cout << intXtal << std::endl;
+      std::string mystring=intXtal.substr(0, intXtal.find_last_of(":"));
+      long int myRawId=std::stol(intXtal.substr( intXtal.find_last_of(":")+1));
+      if(xtalMap.find(mystring)!=xtalMap.end()){
+	xtalMap[mystring].push_back(myRawId);
+      }else{
+	std::vector<long int> xtals;
+	xtals.push_back(myRawId); 
+	xtalMap.insert(std::pair<std::string, std::vector<long int> >(mystring, xtals));
+      }
+    }
+    infile.close();
+  }
 
-void ElectronTree::endJob() { }
+}
 
-std::pair<int,double> ElectronTree::matchToTruth(const reco::GsfElectron* el, edm::Handle<edm::View<reco::GenParticle>> &prunedGenParticles){
+void ElectronTreeXtalList::endJob() { }
+
+std::pair<int,double> ElectronTreeXtalList::matchToTruth(const reco::GsfElectron* el, edm::Handle<edm::View<reco::GenParticle>> &prunedGenParticles){
 
   // Find the closest status 1 gen electron to the reco electron
   double dR = 999;
@@ -1286,7 +1282,7 @@ std::pair<int,double> ElectronTree::matchToTruth(const reco::GsfElectron* el, ed
   return std::make_pair(TRUE_PROMPT_ELECTRON, genEn);
 }
 
-void ElectronTree::findFirstNonElectronMother(const reco::Candidate *particle,
+void ElectronTreeXtalList::findFirstNonElectronMother(const reco::Candidate *particle,
 						 int &ancestorPID, int &ancestorStatus){
 
   if( particle == 0 ){
@@ -1307,4 +1303,4 @@ void ElectronTree::findFirstNonElectronMother(const reco::Candidate *particle,
 }
 
 //define this as a plug-in
-DEFINE_FWK_MODULE(ElectronTree);
+DEFINE_FWK_MODULE(ElectronTreeXtalList);

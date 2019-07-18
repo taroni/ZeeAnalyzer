@@ -1,13 +1,15 @@
 import ROOT
 
-recovFile = ROOT.TFile.Open("electronTree_PierreTag_MCPU_0GeV_reweight.root", "READ")
-prodFile = ROOT.TFile.Open("electronTree_PierreTag_MCPU_0GeV_noRecov_reweight.root", "READ")
+eventlist = [evt.rstrip('\n') for evt in open("eventsMC.txt")]
+
+recovFile = ROOT.TFile.Open("electronTree_PierreTag_sum8gt15.root", "READ")
+prodFile = ROOT.TFile.Open("electronTree_PierreTag_sum8gt0.root", "READ")
 
 rTree = recovFile.Get("ntupler/selected")
 pTree = prodFile.Get("ntupler/selected")
 
 
-outfile= ROOT.TFile.Open("outfileEleComparisonDY.root", "RECREATE")
+outfile= ROOT.TFile.Open("outfileEleComparisonDY_noThr_15GeV.root", "RECREATE")
 ##rTree.SetBranchAddress("runNumber", rRun)
 ##rTree.SetBranchAddress("lumiBlock", rLumi)
 ##rTree.SetBranchAddress("eventNumber", rEvt)
@@ -15,10 +17,10 @@ outfile= ROOT.TFile.Open("outfileEleComparisonDY.root", "RECREATE")
 ##pTree.SetBranchAddress("lumiBlock", pLumi)
 ##pTree.SetBranchAddress("eventNumber", pEvt)
 
-rInvMass=ROOT.TH1F("rInvMass", "rInvMass", 50, 0, 180)
-pInvMass=ROOT.TH1F("pInvMass", "pInvMass", 50, 0, 180)
-rInvMassRaw=ROOT.TH1F("rInvMassRaw", "rInvMassRaw", 50, 0, 180)
-pInvMassRaw=ROOT.TH1F("pInvMassRaw", "pInvMassRaw", 50, 0, 180)
+rInvMass=ROOT.TH1F("rInvMass", "rInvMass", 40, 0, 200)
+pInvMass=ROOT.TH1F("pInvMass", "pInvMass", 40, 0, 200)
+rInvMassRaw=ROOT.TH1F("rInvMassRaw", "rInvMassRaw", 40, 0, 200)
+pInvMassRaw=ROOT.TH1F("pInvMassRaw", "pInvMassRaw", 40, 0, 200)
 
 re1R9=ROOT.TH1F("re1R9", "re1R9", 24, 0, 1.2)
 pe1R9=ROOT.TH1F("pe1R9", "pe1R9", 24, 0, 1.2)
@@ -57,15 +59,24 @@ pe2SigmaIetaIeta=ROOT.TH1F("pe2SigmaIetaIeta","pe2SigmaIetaIeta", 100, 0, 0.1)
 count=0
 for row in rTree:
     count+=1
-    if count % 1000 == 1 : print 'processing %sst electron' % str(count)
+    if count % 2000 == 1 : print 'processing %sst electron' % str(count)
     if row.e1Charge*row.e2Charge!=-1: continue
     if (row.e1SeedIPhi==-599.) : continue
     if (row.e2SeedIPhi==-599.) : continue
     if (row.e1SeedIEta==-99.) : continue
     if (row.e2SeedIEta==-99.) : continue
 
-    if (row.e1SigmaIetaIeta > 0.02) : continue
-    if (row.e2SigmaIetaIeta > 0.02): continue
+    myevt='%s:%s:%s' %(str(row.runNumber), str(row.lumiBlock), str(row.eventNumber))
+    ##if myevt in eventlist:
+    ##            print 'event %s:%s:%s' %(str(row.runNumber), str(row.lumiBlock), str(row.eventNumber))
+    ##            print 'mass (raw SC)',  row.invMass_rawSC 
+    ##            print 'raw energy e1', row.e1RawEnergy,'e2', row.e2RawEnergy
+    ##            print 'energy e1', row.e1Energy, 'e2', row.e2Energy
+    ##            print 'charge e1:', row.e1Charge, 'e2', row.e2Charge
+    ##            print 'phiSC e1:', row.e1PhiSC, 'e2', row.e2PhiSC
+    ##            print 'etaSC e1:',row.e1EtaSC,  'e2', row.e2EtaSC
+    ##            print 'phi e1:', row.e1Phi,  'e2', row.e2Phi
+    ##            print 'eta e1:',row.e1Eta, 'e2', row.e2Eta
 
     for entry in pTree:
         if entry.e1Charge*entry.e2Charge!=-1 : continue
@@ -77,14 +88,29 @@ for row in rTree:
         if (entry.e1SeedIEta==-99.) : continue
         if (entry.e2SeedIEta==-99.) : continue
 
-        if  ( abs(row.e1SeedIPhi-entry.e1SeedIPhi)>1 and abs(row.e2SeedIPhi-entry.e2SeedIPhi)>1 and  abs(row.e1SeedIEta-entry.e1SeedIEta)>1 and abs(row.e2SeedIEta-entry.e2SeedIEta)>1) or (  abs(row.e1SeedIPhi-entry.e2SeedIPhi)>1 and abs(row.e2SeedIPhi-entry.e1SeedIPhi)>1 and  abs(row.e1SeedIEta-entry.e2SeedIEta)>1 and abs(row.e2SeedIEta-entry.e1SeedIEta)>1) :
+        if  ( abs(row.e1SeedIPhi-entry.e1SeedIPhi)<=1 and abs(row.e2SeedIPhi-entry.e2SeedIPhi)<=1 and  abs(row.e1SeedIEta-entry.e1SeedIEta)>1 and abs(row.e2SeedIEta-entry.e2SeedIEta)<=1) or (  abs(row.e1SeedIPhi-entry.e2SeedIPhi)<=1 and abs(row.e2SeedIPhi-entry.e1SeedIPhi)<=1 and  abs(row.e1SeedIEta-entry.e2SeedIEta)<=1 and abs(row.e2SeedIEta-entry.e1SeedIEta)<=1) :
             if abs(row.e1EtaSC-entry.e1EtaSC)>0.1 : continue
             if abs(row.e2EtaSC-entry.e2EtaSC)>0.1 : continue
             if abs(row.e1PhiSC-entry.e1PhiSC)>0.1 : continue
             if abs(row.e2PhiSC-entry.e2PhiSC)>0.1 : continue
 
+            if myevt in eventlist:
+            ##    print 'event %s:%s:%s' %(str(row.runNumber), str(row.lumiBlock), str(row.eventNumber))
+                if abs(row.invMass_rawSC - entry.invMass_rawSC )> 0.1 :
+                    print 'event %s:%s:%s, mass (raw SC) %.3f %.3f' %(str(row.runNumber), str(row.lumiBlock), str(row.eventNumber),  row.invMass_rawSC, entry.invMass_rawSC)
+            ##    print 'raw energy e1', row.e1RawEnergy, entry.e1RawEnergy, 'e2', row.e2RawEnergy, entry.e2RawEnergy
+            ##    print 'energy e1', row.e1Energy, entry.e1Energy, 'e2', row.e2Energy, entry.e2Energy
+            ##    print 'charge e1:', row.e1Charge,  entry.e1Charge, 'e2', row.e2Charge, entry.e2Charge
+            ##    print 'phiSC e1:', row.e1PhiSC, entry.e1PhiSC, 'e2', row.e2PhiSC, entry.e2PhiSC
+            ##    print 'etaSC e1:',row.e1EtaSC, entry.e1EtaSC, 'e2', row.e2EtaSC, entry.e2EtaSC
+            ##    print 'iphiSeed e1:', row.e1SeedIPhi, entry.e1SeedIPhi, 'e2', row.e2SeedIPhi, entry.e2SeedIPhi
+            ##    print 'ietaSeed e1:' ,row.e1SeedIEta, entry.e1SeedIEta, 'e2', row.e2SeedIEta, entry.e2SeedIEta
+            ##    print 'phi e1:', row.e1Phi, entry.e1Phi, 'e2', row.e2Phi, entry.e2Phi
+            ##    print 'eta e1:',row.e1Eta, entry.e1Eta, 'e2', row.e2Eta, entry.e2Eta
+                
             if not (row.e1IsRecovered or row.e2IsRecovered): continue 
-            
+            #if (row.invMass_rawSC>entry.invMass_rawSC):
+                #print 'run:lumi:event %s:%s:%s' %(str(row.runNumber), str(row.lumiBlock), str(row.eventNumber))
             #print row.runNumber, row.lumiBlock, row.eventNumber, entry.runNumber, entry.lumiBlock, entry.eventNumber, row.invMass, entry.invMass, row.e1Charge, row.e2Charge, entry.e1Charge, entry.e2Charge, row.e1PhiSC, entry.e1PhiSC, row.e2PhiSC, entry.e2PhiSC
 
             rInvMass.Fill(row.invMass)
@@ -166,6 +192,6 @@ re1GenEnergy.Write()
 re1RawGenRatio.Write()
 re1EnGenRatio.Write()
 
-
-print 'comparison ended'
 outfile.Close()
+print 'comparison ended'
+

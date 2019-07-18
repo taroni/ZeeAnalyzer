@@ -1,6 +1,10 @@
 // system include files
 #include <memory>
 #include <vector>
+#include <fstream>
+#include <map>
+#include <iostream>
+#include <string>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -60,10 +64,10 @@
 #define initInt       {0,0,0}
 #define initIntCharge {-100,-100,-100}
 
-class ElectronTree : public edm::EDAnalyzer {
+class MatrixInClusters : public edm::EDAnalyzer {
 public:
-  explicit ElectronTree(const edm::ParameterSet&);
-  ~ElectronTree();
+  explicit MatrixInClusters(const edm::ParameterSet&);
+  ~MatrixInClusters();
   
   enum ElectronMatchType {UNMATCHED = 0, 
 			  TRUE_PROMPT_ELECTRON, 
@@ -91,6 +95,8 @@ private:
 
   // ----------member data ---------------------------
   // edm::LumiReWeighting LumiWeights_;  
+
+  std::map<std::string, std::vector<long int> > xtalMap;
 
   bool isRecovered2;
   bool isDead2;
@@ -160,8 +166,8 @@ private:
   Float_t  e1GenEnergy, e2GenEnergy;
   Float_t  invMass_MC;
 
-  Int_t e1IsDead, e1IsRecovered;
-  Int_t e2IsDead, e2IsRecovered;
+  Int_t e1IsDead, e1IsRecovered,e13x3matrices;
+  Int_t e2IsDead, e2IsRecovered,e23x3matrices;
 
   std::vector<bool> vkGood,    vkPoorReco,    vkOutOfTimE,    vkFaultyHardware,    vkNoisy,    vkPoorCalib,    vkSaturated,    vkLeadingEdgeRecovered,    vkNeighboursRecovered,    vkTowerRecovered,    vkDead,    vkKilled,    vkTPSaturated,    vkL1SpikeFlag,    vkWeird,    vkDiWeird,    vkHasSwitchToGain6,    vkHasSwitchToGain1,    vkUnknown;
   std::vector<float> vXtalEn, vSum8, vAve, vNeigh0, vNeigh1, vNeigh2, vNeigh3, vNeigh5, vNeigh6, vNeigh7, vNeigh8,vEnFr;
@@ -210,9 +216,11 @@ private:
   TH1F * h_Flags, *h_FlagsGood; 
 
   TH1F *h_ZeeMass, *h_ZMassRawEn,*hAll_ZeeMass, *hAll_ZMassRawEn, *hRecovered_ZeeMass, *hRecoverd_ZMassRawEn, *hEventCount; 
+
+
 };
 
-ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
+MatrixInClusters::MatrixInClusters(const edm::ParameterSet& iConfig) {
 
   isMC=iConfig.getParameter<bool>("isMC");
 
@@ -308,25 +316,8 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   tree->Branch("e1SeedIPhi", &e1SeedIPhi, "e1SeedIPhi/F");
   tree->Branch("e2SeedIPhi", &e2SeedIPhi, "e2SeedIPhi/F");
 
-  tree->Branch("kGood"                ,&vkGood                );
-  tree->Branch("kPoorReco"            ,&vkPoorReco            );
-  tree->Branch("kOutOfTimE"           ,&vkOutOfTimE           );
-  tree->Branch("kFaultyHardware"      ,&vkFaultyHardware      );
-  tree->Branch("kNoisy"               ,&vkNoisy               );
-  tree->Branch("kPoorCalib"           ,&vkPoorCalib           );
-  tree->Branch("kSaturated"           ,&vkSaturated           );
-  tree->Branch("kLeadingEdgeRecovered",&vkLeadingEdgeRecovered);
-  tree->Branch("kNeighboursRecovered" ,&vkNeighboursRecovered );
-  tree->Branch("kTowerRecovered"      ,&vkTowerRecovered      );
-  tree->Branch("kDead"                ,&vkDead                );
-  tree->Branch("kKilled"              ,&vkKilled              );
-  tree->Branch("kTPSaturated"         ,&vkTPSaturated         );
-  tree->Branch("kL1SpikeFlag"         ,&vkL1SpikeFlag         );
-  tree->Branch("kWeird"               ,&vkWeird               );
-  tree->Branch("kDiWeird"             ,&vkDiWeird             );
-  tree->Branch("kHasSwitchToGain6"    ,&vkHasSwitchToGain6    );
-  tree->Branch("kHasSwitchToGain1"    ,&vkHasSwitchToGain1    );
-  tree->Branch("kUnknown"             ,&vkUnknown             );  
+  tree->Branch("e13x3matrices", &e13x3matrices);
+  tree->Branch("e23x3matrices", &e23x3matrices);
 
   tree->Branch("xtalIeta",&vIeta );  
   tree->Branch("xtalIphi",&vIphi );  
@@ -335,7 +326,7 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
   tree->Branch("xtalRawId",&vRawId );  
   tree->Branch("xtalEn",&vXtalEn);
   tree->Branch("vEnFr", &vEnFr); 
-  
+
 
   tree->Branch("vSum8"     , &vSum8);	 
   tree->Branch("vAve"	    , &vAve);	 
@@ -434,16 +425,18 @@ ElectronTree::ElectronTree(const edm::ParameterSet& iConfig) {
 
 
   typedef reco::Candidate::LorentzVector LorentzVector;
-
+  
   // LumiWeights_ = edm::LumiReWeighting("/afs/cern.ch/work/t/taroni/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/puMC_JuneProjectionFull18_PoissonOOTPU.root",
   //                                     "/afs/cern.ch/work/t/taroni/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/MyDataPileupHistogram.root",
   //                                     "puMC",
   //                                     "pileup");
+
+
 }
 
 
-ElectronTree::~ElectronTree() { }
-const float ElectronTree::getEffectiveArea(float eta) const{
+MatrixInClusters::~MatrixInClusters() { }
+const float MatrixInClusters::getEffectiveArea(float eta) const{
   std::vector<double> absEtaMin_={ 0.0000, 1.0000, 1.4790, 2.0000, 2.2000, 2.3000, 2.4000};
   std::vector<double> absEtaMax_={ 1.0000,  1.4790, 2.0000,  2.2000, 2.3000, 2.4000, 5.0000};
   std::vector<double> effectiveAreaValues_={ 0.1703, 0.1715, 0.1213, 0.1230, 0.1635, 0.1937, 0.2393};
@@ -462,7 +455,7 @@ const float ElectronTree::getEffectiveArea(float eta) const{
   return effArea;
 }
 
-void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void MatrixInClusters::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   using namespace std;
   using namespace edm;
@@ -525,6 +518,8 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   e2IsDead=-99.;
   e2IsRecovered=-99.;
 
+  e13x3matrices=-99;
+  e23x3matrices=-99;
 
   edm::Handle<std::vector<PileupSummaryInfo> > PupInfo;
   
@@ -620,14 +615,14 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
   int i=0; 
   vIeta_.clear();
-
+  e13x3matrices=0;
   for (reco::GsfElectronCollection::const_iterator it = electrons->begin(); it != electrons->end(); it++){
     vIphi_.clear();
     vIsm_.clear();
     vIc_.clear();
     vRawId_.clear();
     vXtalEn_.clear();
-    vEnFr_.clear(); 
+    vEnFr_.clear();
     vkGood_.clear();
     vkPoorReco_.clear();
     vkOutOfTimE_.clear();
@@ -661,7 +656,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     vAve_.clear();
     std::vector<DetId> matrix;
 
-    //std::cout << __LINE__<< " vXtalEn_, first ele iterator " << vXtalEn_.size() << std::endl;
+    std::cout << __LINE__<< " vXtalEn_, first ele iterator " << vXtalEn_.size() << std::endl;
     isRecovered=false;
     isDead = false;
 
@@ -709,34 +704,76 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     const std::vector< std::pair< DetId, float > > hitAndFr_v = el->superCluster()->hitsAndFractions() ;
     vector<EBDetId> vIc1;
-    
-    // std::cout << __LINE__ << std::endl;
+
+    bool xtalInEle=false;
+    for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+      EBDetId idCurrent= hitAndFr_v[ii].first ;
+      
+      std::string myXtalString = std::to_string(runNumber)+":"+std::to_string(lumiBlock)+":"+std::to_string(eventNumber);
+      //std::cout << __LINE__<< " " << myXtalString <<  std::endl;
+      map<std::string, std::vector<long int> >::iterator xtalIt = xtalMap.find(myXtalString);
+      if (xtalIt==xtalMap.end()) continue; 
+      //std::cout << __LINE__ << " " << idCurrent.rawId()<< std::endl ; 
+      std::vector<long int>::iterator itRawId;
+      itRawId = find (xtalIt->second.begin(), xtalIt->second.end(),idCurrent.rawId());
+      if (itRawId!=xtalIt->second.end()){
+	xtalInEle=true;
+	//std::cout << __LINE__<<  std::endl; 
+
+      }
+    }
+    //std::cout << __LINE__<<  std::endl; 
+    if (xtalInEle==true){
+      for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+	EBDetId idCurrent= hitAndFr_v[ii].first ;
+	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	int xtalAboveThr=0;
+	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
+	if (hit ==  rechit_EB_col->end()) continue;
+	//std::cout << __LINE__<<  std::endl; 
+
+	for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
+	  edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
+	  if (hitNeigh ==  rechit_EB_col->end()) continue;
+	  if (hitNeigh == hit) continue;
+	  
+	  if (hitNeigh->checkFlag(EcalRecHit::kL1SpikeFlag)==true) std::cout<< "SPIKE!" << std::endl;
+	  if (hitNeigh->checkFlag(EcalRecHit::kSaturated)==true)continue;
+	  //std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
+	  //std::cout << __LINE__<<  std::endl; 
+
+	  if (hitNeigh->energy()>0.7){
+	    xtalAboveThr++;
+	  }
+	  if (xtalAboveThr==8) e13x3matrices++;
+
+	}
+      }
+    }
+   
+    //std::cout << __LINE__ << std::endl;
     for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
       EBDetId idCurrent= hitAndFr_v[ii].first ;
       float enFr = hitAndFr_v[ii].second ;
       edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
       if (hit ==  rechit_EB_col->end()) continue;
-      // for (size_t ic=0; ic<vIc1.size(); ic++){
-      // 	std::cout << __LINE__ << " " << vIc1[ic] << " "<< idCurrent << std::endl;
-      // 	if (vIc1[ic]==idCurrent) std::cout << "Crystal already found in the supercluster " << idCurrent << std::endl;
-      // }
-      // vIc.push_back(idCurrent);
+       
+
+      
+      matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
 
 
-      if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
-	std::cout << __LINE__ << " " << ii << " " << idCurrent << " " << hit->energy()  << " " << it->energy()<< " " << it->superCluster()->rawEnergy() << " " << hitAndFr_v.size() << " " << idCurrent.rawId()<< std::endl;
-	// for (int i=0; i< 19 ; i++){
-	//   std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
-	//   if (hit->checkFlag(i)==1) h_Flags -> Fill(i);
-	//   if (i!=0 && hit->checkFlag(0)==1 && hit->checkFlag(i)==1) h_FlagsGood -> Fill(i);
+      //std::cout << __LINE__ << endl ; 
+      //if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
+      std::string myXtalString = std::to_string(runNumber)+":"+std::to_string(lumiBlock)+":"+std::to_string(eventNumber);
+      map<std::string, std::vector<long int> >::iterator xtalIt = xtalMap.find(myXtalString);
+      if (xtalIt==xtalMap.end()) continue; 
+      std::vector<long int>::iterator itRawId;
+      itRawId = find (xtalIt->second.begin(), xtalIt->second.end(),idCurrent.rawId());
+      if (itRawId!=xtalIt->second.end()){
+	std::cout << __LINE__ <<  "xtal found "<< std::endl;
 
-	// }
-	// std::cout << std::endl;
-	// std::cout << __LINE__ << " " << ii << " " << idCurrent << " " << hit->energy()  << " " << it->energy()<< " " << it->superCluster()->rawEnergy() << " " << hitAndFr_v.size() << " " << idCurrent.rawId()<< " "<<  hitAndFr_v[ii].second <<std::endl;
 
-	// std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << std::endl;
-	// std::cout << "kGood " <<  bool(hit->checkFlag(EcalRecHit::kGood)) << ", " << "kPoorReco		  " << bool(hit->checkFlag(EcalRecHit::kPoorReco))		  << ", "<< "kOutOfTimE		  " <<bool( hit->checkFlag(EcalRecHit::kOutOfTime))		  << ", "  << "kFaultyHardware	  " << bool(hit->checkFlag(EcalRecHit::kFaultyHardware))	  << ", "  << "kNoisy		  " << bool(hit->checkFlag(EcalRecHit::kNoisy		 )) << ", " << "kPoorCalib		  " << bool(hit->checkFlag(EcalRecHit::kPoorCalib		 )) << ", "  << "kSaturated		  " << bool(hit->checkFlag(EcalRecHit::kSaturated		 )) << ", " << "kLeadingEdgeRecovered " << bool(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  )) << ", " << "kNeighboursRecovered  " << bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered	 )) << ", " << "kTowerRecovered	  " << bool(hit->checkFlag(EcalRecHit::kTowerRecovered	 )) << ", " << "kDead		  " << bool(hit->checkFlag(EcalRecHit::kDead		  	 )) << ", "<< "kKilled		  " << bool(hit->checkFlag(EcalRecHit::kKilled		 )) << ", " << "kTPSaturated	  " << bool(hit->checkFlag(EcalRecHit::kTPSaturated		 )) << ", " << "kL1SpikeFlag	  " << bool(hit->checkFlag(EcalRecHit::kL1SpikeFlag		 )) << ", "  << "kWeird		  " << bool(hit->checkFlag(EcalRecHit::kWeird		 )) << ", " << "kDiWeird		  " << bool(hit->checkFlag(EcalRecHit::kDiWeird		 )) << ", " << "kHasSwitchToGain6	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 )) << ", " << "kHasSwitchToGain1	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 )) << ", " << "kUnknown              " << bool(hit->checkFlag(EcalRecHit::kUnknown) )               << std::endl;  
-	
 	float neigh0=0.;
 	float neigh1=0.;
 	float neigh2=0.;
@@ -750,14 +787,13 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
 	
 	for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
-	  std::cout << __LINE__ << " matrix size " << matrix.size() << std::endl; 
 	  edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
 	  if (hitNeigh ==  rechit_EB_col->end()) continue;
 	  if (hitNeigh == hit) continue;
 	  
 	  if (hitNeigh->checkFlag(EcalRecHit::kL1SpikeFlag)==true) std::cout<< "SPIKE!" << std::endl;
 	  if (hitNeigh->checkFlag(EcalRecHit::kSaturated)==true)continue;
-	  std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
+	  //std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
 	  sum8+=hitNeigh->energy();
 	  if (iM==0)  neigh0=hitNeigh->energy();
 	  if (iM==1)  neigh1=hitNeigh->energy();
@@ -779,7 +815,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	vNeigh6_.push_back(neigh6);
 	vNeigh7_.push_back(neigh7);
 	vNeigh8_.push_back(neigh8);
-	std::cout << "is e1 good?" << bool(hit->checkFlag(EcalRecHit::kGood))<< " " << idCurrent << " " << enFr<< std::endl;
+	
 	vkGood_.push_back(bool(hit->checkFlag(EcalRecHit::kGood)));
 	vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
 	vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
@@ -811,6 +847,9 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	//break;
       }//checking the hit is recovered
     }//running on the hit in the supercluster of the electron
+    //std::cout << __LINE__ << std::endl;
+
+    e23x3matrices=0;
     for (reco::GsfElectronCollection::const_iterator jt = it+1; jt != electrons->end(); jt++){
       isRecovered2=false;
       isDead2=false;
@@ -854,45 +893,61 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       }
       const std::vector< std::pair< DetId, float > > hitAndFr_v = jt->superCluster()->hitsAndFractions() ;
       vector<EBDetId> vIc2;
-      // std::cout << __LINE__ << std::endl;
+      //std::cout << __LINE__ << std::endl;
+
+      bool xtalInEle=false;
+      for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+	EBDetId idCurrent= hitAndFr_v[ii].first ;
+	
+	std::string myXtalString = std::to_string(runNumber)+":"+std::to_string(lumiBlock)+":"+std::to_string(eventNumber);
+	map<std::string, std::vector<long int> >::iterator xtalIt = xtalMap.find(myXtalString);
+	if (xtalIt==xtalMap.end()) continue; 
+	std::vector<long int>::iterator itRawId;
+	itRawId = find (xtalIt->second.begin(), xtalIt->second.end(),idCurrent.rawId());
+	if (itRawId!=xtalIt->second.end()){
+	  xtalInEle=true;
+	}
+      }
+      //std::cout << __LINE__ << std::endl;
+
+      if (xtalInEle==true){
+	for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
+	  EBDetId idCurrent= hitAndFr_v[ii].first ;
+	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
+	  edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
+	  if (hit ==  rechit_EB_col->end()) continue;
+
+	  int xtalAboveThr=0;
+	  for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
+	    edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
+	    if (hitNeigh ==  rechit_EB_col->end()) continue;
+	    if (hitNeigh == hit) continue;
+	    
+	    if (hitNeigh->checkFlag(EcalRecHit::kL1SpikeFlag)==true) std::cout<< "SPIKE!" << std::endl;
+	    if (hitNeigh->checkFlag(EcalRecHit::kSaturated)==true)continue;
+	    //std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
+	    if (hitNeigh->energy()>0.7){
+	      xtalAboveThr++;
+	    }
+	    if (xtalAboveThr==8) e23x3matrices++;
+	  }
+	}
+      }
+      //std::cout << __LINE__ << std::endl;
       for (unsigned int ii=0; ii<hitAndFr_v.size(); ii++){
 	EBDetId idCurrent= hitAndFr_v[ii].first ;
 	float enFr = hitAndFr_v[ii].second;
 	edm::SortedCollection<EcalRecHit>::const_iterator hit = rechit_EB_col->find( idCurrent );
 	if (hit ==  rechit_EB_col->end()) continue;
-	// for (size_t ic=0; ic<vIc2.size(); ic++){
-	//   if (vIc2[ic]==idCurrent) std::cout << "Crystal already found in the supercluster "<< idCurrent << std::endl;
-	// }
-	// vIc2.push_back(idCurrent);
-	
-	if ( bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered))==true) {
-	  std::cout << __LINE__ << " " << ii << " " << idCurrent << " " << hit->energy() << " " << jt->energy() << " " << jt->superCluster()->rawEnergy() << " " <<  hitAndFr_v.size() << " " << idCurrent.rawId()<< std::endl;
-	
-	  //   for (int i=0; i< 19 ; i++){
-	//     std::cout << "Flag "<< i << " " << hit->checkFlag(i)<< ", ";
-	//   }
-	   // std::cout << std::endl;
-	   // std::cout << "kGood " <<  hit->checkFlag(EcalRecHit::kGood) << std::endl;
-	   // std::cout << "kGood " <<  bool(hit->checkFlag(EcalRecHit::kGood)) << ", " 
-	   // 	    << "kPoorReco		  " << bool(hit->checkFlag(EcalRecHit::kPoorReco))		  << ", "
-	   // 	    << "kOutOfTimE		  " <<bool( hit->checkFlag(EcalRecHit::kOutOfTime))		  << ", "
-	   // 	    << "kFaultyHardware	  " << bool(hit->checkFlag(EcalRecHit::kFaultyHardware))	  << ", "
-	   // 	    << "kNoisy		  " << bool(hit->checkFlag(EcalRecHit::kNoisy		 )) << ", "
-	   // 	    << "kPoorCalib		  " << bool(hit->checkFlag(EcalRecHit::kPoorCalib		 )) << ", "
-	   // 	    << "kSaturated		  " << bool(hit->checkFlag(EcalRecHit::kSaturated		 )) << ", "
-	   // 	    << "kLeadingEdgeRecovered " << bool(hit->checkFlag(EcalRecHit::kLeadingEdgeRecovered  )) << ", "
-	   // 	    << "kNeighboursRecovered  " << bool(hit->checkFlag(EcalRecHit::kNeighboursRecovered	 )) << ", "
-	   // 	    << "kTowerRecovered	  " << bool(hit->checkFlag(EcalRecHit::kTowerRecovered	 )) << ", "
-	   // 	    << "kDead		  " << bool(hit->checkFlag(EcalRecHit::kDead		  	 )) << ", "
-	   // 	    << "kKilled		  " << bool(hit->checkFlag(EcalRecHit::kKilled		 )) << ", "
-	   // 	    << "kTPSaturated	  " << bool(hit->checkFlag(EcalRecHit::kTPSaturated		 )) << ", "
-	   // 	    << "kL1SpikeFlag	  " << bool(hit->checkFlag(EcalRecHit::kL1SpikeFlag		 )) << ", "
-	   // 	    << "kWeird		  " << bool(hit->checkFlag(EcalRecHit::kWeird		 )) << ", "
-	   // 	    << "kDiWeird		  " << bool(hit->checkFlag(EcalRecHit::kDiWeird		 )) << ", "
-	   // 	    << "kHasSwitchToGain6	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain6	 )) << ", "
-	   // 	    << "kHasSwitchToGain1	  " << bool(hit->checkFlag(EcalRecHit::kHasSwitchToGain1	 )) << ", "
-	   // 	    << "kUnknown              " << bool(hit->checkFlag(EcalRecHit::kUnknown) )               << std::endl;  
 
+	std::string myXtalString = std::to_string(runNumber)+":"+std::to_string(lumiBlock)+":"+std::to_string(eventNumber);
+	map<std::string, std::vector<long int> >::iterator xtalIt = xtalMap.find(myXtalString);
+	//std::cout << __LINE__ << " map size " << xtalMap.size() << std::endl ; 
+	if (xtalIt==xtalMap.end()) continue; 
+	std::vector<long int>::iterator itRawId;
+	itRawId = find (xtalIt->second.begin(), xtalIt->second.end(),idCurrent.rawId());
+	if (itRawId!=xtalIt->second.end()){
+	  std::cout << __LINE__ <<  " xtal found "<< std::endl;
 
 	  float neigh0=0.;
 	  float neigh1=0.;
@@ -907,8 +962,6 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	  matrix = EcalClusterTools::matrixDetId( topology, idCurrent, -1, 1, -1, 1 );
 	  
 	  for ( size_t iM = 0; iM < matrix.size(); ++iM ) {
-	    std::cout << __LINE__ << " matrix size " << matrix.size() << std::endl; 
-	  
 	    edm::SortedCollection<EcalRecHit>::const_iterator hitNeigh = rechit_EB_col->find(matrix[iM] );
 	    if (hitNeigh ==  rechit_EB_col->end()) continue;
 	    if (hitNeigh == hit) continue;
@@ -916,7 +969,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	    if (hitNeigh->checkFlag(EcalRecHit::kL1SpikeFlag)==true) std::cout<< "SPIKE!" << std::endl;
 	    if (hitNeigh->checkFlag(EcalRecHit::kSaturated)==true)continue;
 	    sum8+=hitNeigh->energy();
-	    std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
+	    //std::cout << "neighbour energy :"<<  i << " " <<  hitNeigh->energy() << ", sum8 " << sum8 << ", ave "<< sum8/8. << std::endl;
 	   
 	    if (iM==0)  neigh0=hitNeigh->energy();
 	    if (iM==1)  neigh1=hitNeigh->energy();
@@ -938,7 +991,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	  vNeigh6_.push_back(neigh6);
 	  vNeigh7_.push_back(neigh7);
 	  vNeigh8_.push_back(neigh8);
-	  std::cout << "is e2 good?" << bool(hit->checkFlag(EcalRecHit::kGood))<< " " << idCurrent<< " " << enFr << std::endl;
+
 	  vkGood_.push_back(bool(hit->checkFlag(EcalRecHit::kGood)));
 	  vkPoorReco_.push_back(hit->checkFlag(EcalRecHit::kPoorReco));
 	  vkOutOfTimE_.push_back(hit->checkFlag(EcalRecHit::kOutOfTime));   
@@ -995,7 +1048,6 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       	  h_ZeeMass->Fill( zp4.M(),MyWeight);
        	  h_ZMassRawEn->Fill(invMass_rawSC,MyWeight);
 	}
-	std::cout << " is e1 recovered? "<< isRecovered << ", is e2 recovered? " << isRecovered2 << std::endl; 
 	std::cout << "raw Mass " << invMass_rawSC << " e1 raw En " <<  it->superCluster()->rawEnergy() << " " << jt->superCluster()->rawEnergy() << std::endl;
  	mcGenWeight=-1.;
        	e1Charge=(int)it->charge();
@@ -1018,14 +1070,14 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	//if (it->superCluster()->caloID().detector(reco::CaloID::DET_ECAL_BARREL)==true){
 	if(it->superCluster()->seed()->seed().subdetId()==EcalBarrel){
 	  EBDetId e1SeedDetId(it->superCluster()->seed()->seed());
-	  std::cout << "Seed e1" <<  e1SeedDetId << " "<< e1SeedDetId.ieta()<< " " << e1SeedDetId.iphi()<< std::endl;
+	  std::cout << "Seed " <<  e1SeedDetId << " "<< e1SeedDetId.ieta()<< " " << e1SeedDetId.iphi()<< std::endl;
 	  e1SeedIEta=(float)e1SeedDetId.ieta();
 	  e1SeedIPhi=(float)e1SeedDetId.iphi();
 	}
 	//if (jt->superCluster()->caloID().detector(reco::CaloID::DET_ECAL_BARREL)==true){
 	if(jt->superCluster()->seed()->seed().subdetId()==EcalBarrel){
 	  EBDetId e2SeedDetId(jt->superCluster()->seed()->seed());
-	  std::cout << "Seed e2 " <<  e2SeedDetId << " "<< e2SeedDetId.ieta()<< " " << e2SeedDetId.iphi()<< std::endl;
+	  std::cout << "Seed " <<  e2SeedDetId << " "<< e2SeedDetId.ieta()<< " " << e2SeedDetId.iphi()<< std::endl;
 	  e2SeedIEta=(float)e2SeedDetId.ieta();
 	  e2SeedIPhi=(float)e2SeedDetId.iphi();
 	}
@@ -1043,6 +1095,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   	e1Pt=it->pt();
 	e2Pt=jt->pt();
 	invMass= zp4.M();
+
 	
   	if (isMC==true){
 	  std::pair<int,double> e1GenMatchEn=std::make_pair(0,0);
@@ -1087,6 +1140,7 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	vRawId=vRawId_;
 	vXtalEn=vXtalEn_;
 	vEnFr=vEnFr_;
+
 	
 	vNeigh0=vNeigh0_;
 	vNeigh1=vNeigh1_;
@@ -1228,11 +1282,33 @@ void ElectronTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 }
 
 
-void ElectronTree::beginJob() { }
+void MatrixInClusters::beginJob() { 
+  std::string intXtal; 
+  std::ifstream infile("crystalsSum8gt20.txt");
+  std::cout << __LINE__ << " file open? " <<infile.is_open()<< std::endl; 
+  if (infile.is_open()){
+    int lineCount=0;
+    while(getline(infile, intXtal)){
+      lineCount++;
+      if (lineCount<11)std::cout << intXtal << std::endl;
+      std::string mystring=intXtal.substr(0, intXtal.find_last_of(":"));
+      long int myRawId=std::stol(intXtal.substr( intXtal.find_last_of(":")+1));
+      if(xtalMap.find(mystring)!=xtalMap.end()){
+	xtalMap[mystring].push_back(myRawId);
+      }else{
+	std::vector<long int> xtals;
+	xtals.push_back(myRawId); 
+	xtalMap.insert(std::pair<std::string, std::vector<long int> >(mystring, xtals));
+      }
+    }
+    infile.close();
+  }
 
-void ElectronTree::endJob() { }
+}
 
-std::pair<int,double> ElectronTree::matchToTruth(const reco::GsfElectron* el, edm::Handle<edm::View<reco::GenParticle>> &prunedGenParticles){
+void MatrixInClusters::endJob() { }
+
+std::pair<int,double> MatrixInClusters::matchToTruth(const reco::GsfElectron* el, edm::Handle<edm::View<reco::GenParticle>> &prunedGenParticles){
 
   // Find the closest status 1 gen electron to the reco electron
   double dR = 999;
@@ -1286,7 +1362,7 @@ std::pair<int,double> ElectronTree::matchToTruth(const reco::GsfElectron* el, ed
   return std::make_pair(TRUE_PROMPT_ELECTRON, genEn);
 }
 
-void ElectronTree::findFirstNonElectronMother(const reco::Candidate *particle,
+void MatrixInClusters::findFirstNonElectronMother(const reco::Candidate *particle,
 						 int &ancestorPID, int &ancestorStatus){
 
   if( particle == 0 ){
@@ -1307,4 +1383,4 @@ void ElectronTree::findFirstNonElectronMother(const reco::Candidate *particle,
 }
 
 //define this as a plug-in
-DEFINE_FWK_MODULE(ElectronTree);
+DEFINE_FWK_MODULE(MatrixInClusters);
