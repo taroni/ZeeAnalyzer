@@ -1,20 +1,13 @@
-##add it if your job need the grid proxy
-#Proxy_filename = /afs/cern.ch/user/t/taroni/x509up_u29820
-
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT
 getenv = True
-executable = /afs/cern.ch/user/t/taroni/work/private/newDeadCh102X/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/batch.sh
-+MaxRuntime = 21600
+executable = /afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/batchZee_$(ProcId).sh
+
 #the queue to use: list of the que in slide 55 of the tutorial https://indico.cern.ch/event/783287/ 
-+JobFlavour = "longlunch"
++JobFlavour = "espresso"
+#+MaxRuntime = 21600
 Output = testZee_$(ProcId).out
 Error = testZee_$(ProcId).err
 Log = testZee_$(ProcId).log
-#remove the proxy filename if the proxy is not needed
-#nchuncks is the number of jobs
-#Arguments = ichunk=$(ProcId) nchunks=10 outname=testZeeD_official_$(ProcId).root
-#Arguments = ichunk=$(ProcId) nchunks=1
-Arguments =  outname=testZeeD_official_$(ProcId).root
-#the number is the number of jobs. 
-Queue 
+#the number after 'queue' is the number of jobs
+queue 5
