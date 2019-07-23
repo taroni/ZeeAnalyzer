@@ -26,7 +26,7 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(100)
 )
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
@@ -131,7 +131,7 @@ print len(inputfiles), """+str(numberOfJobs)+""", start, end
 
 for ii in inputfiles:
     if (count >= start and count < end):
-        process.source.fileNames.append(ii)
+        process.source.fileNames.append("root://xrootd-cms.infn.it/"+ii)
         
     count+=1
 
@@ -166,6 +166,8 @@ for ii in inputfiles:
     i+=1
 
 cndsh="""
+use_x509userproxy = true
+x509userproxy = /afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/x509up_u29820
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT
 getenv = True
@@ -179,3 +181,7 @@ Log = testZee_$(ProcId).log
 #the number after 'queue' is the number of jobs
 queue """+str(numberOfJobs)+"""
 """
+cndsh_file=open("condor.jdl", "w")
+cndsh_file.write(cndsh)
+cndsh_file.close()
+
