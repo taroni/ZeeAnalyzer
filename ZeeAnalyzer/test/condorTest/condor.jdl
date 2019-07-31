@@ -12,4 +12,4 @@ Output = testZee_$(ProcId).out
 Error = testZee_$(ProcId).err
 Log = testZee_$(ProcId).log
 #the number after 'queue' is the number of jobs
-queue 100
+queue 200

@@ -2,7 +2,7 @@ import os
 
 #first job
 i=0
-numberOfJobs=100
+numberOfJobs=200
 lastjob=numberOfJobs+i
 
 while i<lastjob:
@@ -153,8 +153,9 @@ for ii in inputfiles:
             eval `scram runtime -csh`
             cd -
             cmsRun $CFG
-            cp testZeeC_recov_"""+str(i)+""".root /eos/cms/store/user/taroni/condorTest/.
-            cp eleTree_testZeeC_recov_"""+str(i)+""".root /eos/cms/store/user/taroni/condorTest/.
+            cp testZeeC_recov_"""+str(i)+""".root /eos/cms/store/user/taroni/condorTest2/.
+            cp eleTree_testZeeC_recov_"""+str(i)+""".root /eos/cms/store/user/taroni/condorTest2/.
+            exit
             
     """
     sh_file = open("batchZee_"+str(i)+".sh","w")
