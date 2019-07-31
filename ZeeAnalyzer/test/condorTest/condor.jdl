@@ -1,15 +1,15 @@
 
 use_x509userproxy = true
-x509userproxy = /afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/x509up_u29820
+x509userproxy = /afs/cern.ch/user/t/taroni/work/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/x509up_u29820
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT
 getenv = True
-executable = /afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/batchZee_$(ProcId).sh
+executable = /afs/cern.ch/user/t/taroni/work/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/batchZee_$(ProcId).sh
 +MaxRuntime = 21600
 #the queue to use: list of the que in slide 55 of the tutorial https://indico.cern.ch/event/783287/ 
-+JobFlavour = "espresso"
++JobFlavour = "tomorrow"
 Output = testZee_$(ProcId).out
 Error = testZee_$(ProcId).err
 Log = testZee_$(ProcId).log
 #the number after 'queue' is the number of jobs
-queue 5
+queue 100

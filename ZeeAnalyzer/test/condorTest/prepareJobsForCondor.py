@@ -2,7 +2,7 @@ import os
 
 #first job
 i=0
-numberOfJobs=5
+numberOfJobs=100
 lastjob=numberOfJobs+i
 
 while i<lastjob:
@@ -26,9 +26,9 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(100)
+    input = cms.untracked.int32(-1)
 )
-process.MessageLogger.cerr.FwkReport.reportEvery = 10
+process.MessageLogger.cerr.FwkReport.reportEvery = 50
 
 readFiles=cms.untracked.vstring()
 # Input source
@@ -120,7 +120,7 @@ process.RAWRECOoutput_step = cms.EndPath(process.RAWRECOoutput)
 process.schedule = cms.Schedule(process.raw2digi_step,process.reconstruction_step, process.RAWRECOoutput_step , process.endjob_step, process.p)
 
 
-#number of input file per job: 20
+#number of input file per job: 44
 mf = open(\"ZeeFiles.txt\")
 inputfiles=[x.strip(\"\\n\") for x in mf]
 filePerJob=int(math.ceil(float(len(inputfiles))/float("""+str(numberOfJobs)+""")))
@@ -145,12 +145,13 @@ for ii in inputfiles:
     #crea lo script per lanciare su cluster
     sh = """#!/bin/tcsh -f
     
-            set W_DIR = \"/afs/cern.ch/work/t/taroni/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest\"
-            set CFG = \"/afs/cern.ch/work/t/taroni/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/ZeeRecovery_"""+str(i)+"""_cfg.py\"
-            set FILELIST = \"/afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/ZeeFiles.txt\"
-            ##cp $FILELIST .
+            set W_DIR = \"/afs/cern.ch/work/t/taroni/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest\"
+            set CFG = \"/afs/cern.ch/work/t/taroni/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/ZeeRecovery_"""+str(i)+"""_cfg.py\"
+            set FILELIST = \"/afs/cern.ch/user/t/taroni/work/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/ZeeFiles.txt\"
+            cp $FILELIST .
             cd $W_DIR
             eval `scram runtime -csh`
+            cd -
             cmsRun $CFG
             cp testZeeC_recov_"""+str(i)+""".root /eos/cms/store/user/taroni/condorTest/.
             cp eleTree_testZeeC_recov_"""+str(i)+""".root /eos/cms/store/user/taroni/condorTest/.
@@ -167,14 +168,14 @@ for ii in inputfiles:
 
 cndsh="""
 use_x509userproxy = true
-x509userproxy = /afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/x509up_u29820
+x509userproxy = /afs/cern.ch/user/t/taroni/work/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/x509up_u29820
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT
 getenv = True
-executable = /afs/cern.ch/user/t/taroni/work/private/DeadChRecovPR/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/batchZee_$(ProcId).sh
+executable = /afs/cern.ch/user/t/taroni/work/private/JulyDeadCh/src/ZeeAnalyzer/ZeeAnalyzer/test/condorTest/batchZee_$(ProcId).sh
 +MaxRuntime = 21600
 #the queue to use: list of the que in slide 55 of the tutorial https://indico.cern.ch/event/783287/ 
-+JobFlavour = "espresso"
++JobFlavour = "tomorrow"
 Output = testZee_$(ProcId).out
 Error = testZee_$(ProcId).err
 Log = testZee_$(ProcId).log

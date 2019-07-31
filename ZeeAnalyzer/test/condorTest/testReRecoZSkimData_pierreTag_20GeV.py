@@ -1,12 +1,8 @@
-from FWCore.ParameterSet.VarParsing import VarParsing
-options = VarParsing ('python')
-options.register('outname', 'test.root',
-    VarParsing.multiplicity.singleton,
-    VarParsing.varType.string,
-    "Output file name"
-)
-options.parseArguments()
-
+# Auto generated configuration file
+# using: 
+# Revision: 1.19 
+# Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
+# with command line options: step3 --conditions 101X_dataRun2_Prompt_v9 -n -1 --era Run2_2018 --eventcontent RAWRECO --data -s RAW2DIGI,RECO --datatier RAW-RECO --python testReRecoZSkimData_fromRawReco.py --filein /store/data/Run2018B/EGamma/RAW-RECO/ZElectron-PromptReco-v1/000/317/864/00000/8A838407-EC71-E811-8525-FA163E54B47A.root --fileout file:step3_2018.root --scenario pp --no_exec
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
@@ -26,19 +22,13 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(500)
+    input = cms.untracked.int32(100)
 )
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
-
-readFiles=cms.untracked.vstring()
-readFiles.extend([
- '/store/data/Run2018C/EGamma/RAW-RECO/ZElectron-PromptReco-v3/000/319/941/00000/1E600237-858D-E811-9F53-FA163E6CDBB2.root'
-])
 # Input source
-inputFiles = readFiles
 process.source = cms.Source("PoolSource",
-    fileNames = inputFiles
-        
+    fileNames = cms.untracked.vstring(#'/store/data/Run2018B/EGamma/RAW-RECO/ZElectron-PromptReco-v1/000/317/182/00000/08C8D1B6-7966-E811-B307-FA163EAF8008.root',
+        '/store/data/Run2018C/EGamma/RAW-RECO/ZElectron-PromptReco-v3/000/319/941/00000/1E600237-858D-E811-9F53-FA163E6CDBB2.root'
 ),
     secondaryFileNames = cms.untracked.vstring()
 )
@@ -82,8 +72,6 @@ process.ecalRecHit.singleChannelRecoveryThreshold=0.7
 process.ecalRecHit.sum8ChannelRecoveryThreshold=20.
 
 # Output definition
-outputFile = "testZeeC_recov.root" if options.outname=='' else options.outname
-print outputFile
 
 process.RAWRECOoutput = cms.OutputModule("PoolOutputModule",
                              
@@ -91,7 +79,7 @@ process.RAWRECOoutput = cms.OutputModule("PoolOutputModule",
         dataTier = cms.untracked.string('RAW-RECO'),
         filterName = cms.untracked.string('')
     ),
-    fileName = cms.untracked.string(outputFile),
+    fileName = cms.untracked.string('file:step3_2018.root'),
     outputCommands = process.RAWRECOEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0),
                                          )
@@ -111,7 +99,7 @@ process.ntupler = cms.EDAnalyzer(
     )
 
 process.TFileService = cms.Service("TFileService",
-                                   fileName = cms.string("eleTree_"+outputFile)
+                                   fileName = cms.string("electronTree_20GeV.root")
                                    )
 
 process.load("DPGAnalysis/Skims/ZElectronSkim_cff") 
